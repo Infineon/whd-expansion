@@ -47,6 +47,13 @@
 extern "C" {
 #endif
 
+typedef enum
+{
+    WHD_INTERFACE_TYPE_STA = 0,    /**< STA or client interface. */
+    WHD_INTERFACE_TYPE_AP,         /**< SoftAP interface. */
+    WHD_INTERFACE_TYPE_AP_STA      /**< Concurrent AP + STA mode. */
+} whd_interface_type_t;
+
 whd_result_t whd_custom_hal_sdio_init(cyhal_sdio_t *obj);
 
 void whd_custom_hal_sdio_irq_enable(cyhal_sdio_t *obj, cyhal_sdio_irq_event_t event, bool enable);
@@ -64,6 +71,8 @@ void whd_custom_hal_sdio_register_irq(cyhal_sdio_t *obj, cyhal_sdio_irq_handler_
 whd_result_t whd_custom_wifi_init(whd_interface_t *interface);
 
 whd_driver_t whd_custom_get_wifi_driver(void);
+
+whd_result_t whd_custom_get_wifi_interface(whd_interface_type_t interface_type, whd_interface_t *iface);
 
 #ifdef __cplusplus
 }

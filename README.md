@@ -11,26 +11,26 @@ The [release notes](./RELEASE.md) detail the current release. You can also find 
 ----------------------------------
 |     RTOS     |55500|55900|55572|
 |:------------:|:---:|:---:|:---:|
-|  FreeRTOS    |  O  |     |     |
+|  FreeRTOS    |  O  |     |     | 
 |  Zephyr      |  O  |     |     |
 
 ### Supported platform
 ----------------------------------
 |   Platform   |55500|55900|55572|
 |:------------:|:---:|:---:|:---:|
-|  IMXRT1170-A |  O  |     |     |
+|  IMXRT1170-A |  O  |     |     | 
 |              |     |     |     |
 
 ### Supported bus interface
 ----------------------------------
 |  Interface   |55500|55900|55572|
 |:------------:|:---:|:---:|:---:|
-|  SDIO        |  O  |     |     |
+|  SDIO        |  O  |     |     | 
 |  SPI         |     |     |     |
 |  M2M         |     |     |     |
 |  OCI         |     |     |     |
 
-### AP mode support
+### AP mode support 
 ----------------------------------
 |   Security   |55500|55900|55572|
 |:------------:|:---:|:---:|:---:|

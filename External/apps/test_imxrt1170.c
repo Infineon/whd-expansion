@@ -20,9 +20,10 @@
 #include "cyabs_rtos.h"
 #include "whd_network_mw_core.h"
 #include "whd_custom_hal_sdio.h"
+#include "wpa3_wcm_intf.h"
 
 /* Enable this for Soft AP bring up sample code */
-#define SAP
+//#define SAP
 
 #define WIFI_TASK_PRIO (3)
 #define WIFI_TASK_STACK_SIZE (1024*4)
@@ -50,8 +51,8 @@ typedef enum
 #define SOFTAP_SSID                                  "AP_SSID"
 #define SOFTAP_PASSWORD                              "AP_PASSWORD"
 #define SOFTAP_SECURITY_TYPE                         WHD_SECURITY_WPA2_AES_PSK
-#define SOFTAP_CHANNEL                               36
-#define SOFTAP_BAND                                  WHD_BAND_5GHZ
+#define SOFTAP_CHANNEL                               11
+#define SOFTAP_BAND                                  WHD_BAND_2_4GHZ
 #define SOFTAP_IP_ADDRESS                            MAKE_IPV4_ADDRESS(192, 168, 0,  2)
 #define SOFTAP_NETMASK                               MAKE_IPV4_ADDRESS(255, 255, 255, 0)
 #define SOFTAP_GATEWAY                               MAKE_IPV4_ADDRESS(192, 168, 0,  2)
@@ -66,6 +67,7 @@ static const whd_network_static_ip_addr_t ap_ip_settings =
 #define WIFI_SSID                                   "WIFI_SSID"
 #define WIFI_PASSWORD                               "WIFI_PASSWORD"
 #define WIFI_SECURITY                               WHD_SECURITY_WPA2_AES_PSK
+#define CONNECT_RETRY_COUNT                         10
 #endif
 
 #ifdef SAP
@@ -145,6 +147,23 @@ cy_rslt_t StartSoftAP()
     return res;
 }
 #else
+
+int mbedtls_hardware_poll(void *data, unsigned char *output, size_t len, size_t *olen)
+{
+	cy_time_t seed;
+	cy_rtos_get_time(&seed);
+
+	srand(seed);
+
+	 *olen = 0;
+
+	    for (size_t i = 0; i < len; i++) {
+            output[i] = rand() % seed;
+	    }
+	    *olen = len;
+	    return 0;
+}
+
 cy_rslt_t wifi_connect(void)
 {
     whd_network_static_ip_addr_t static_ip;
@@ -167,7 +186,35 @@ cy_rslt_t wifi_connect(void)
 
     cy_rslt_t result = CY_RSLT_SUCCESS;
 
-    result = whd_wifi_join(whd_ifs[CY_NET_INTERFACE_TYPE_STA] , &ssid, security, key, keylen);
+    for(int i=1; i<= CONNECT_RETRY_COUNT; i++)
+    {
+        PRINTF("Connecting to %s, Attempt %d/%d\n", ssid.value, i, CONNECT_RETRY_COUNT);
+		if(security == WHD_SECURITY_WPA3_SAE)
+		{
+			result = wpa3_supplicant_sae_start(ssid.value, ssid.length, key, keylen);
+			if(result != CY_RSLT_SUCCESS)
+			{
+				PRINTF("SAE Failed\n");
+				continue;
+			}
+			else
+			{
+				PRINTF("SAE successful\n");
+			}
+		}
+
+        result = whd_wifi_join(whd_ifs[CY_NET_INTERFACE_TYPE_STA] , &ssid, security, key, keylen);
+        if(result == CY_RSLT_SUCCESS)
+            break;
+        else if(i!=CONNECT_RETRY_COUNT)
+        {
+            PRINTF("Join failed, retrying...\n");
+        }
+        else
+        {
+            PRINTF("Connect failed, exceeded maximum retries\n");
+        }
+    }
 
     if(result == CY_RSLT_SUCCESS)
     {

@@ -1,0 +1,129 @@
+diff --git a/include/wpa3_ext_supp.h b/include/wpa3_ext_supp.h
+index 69e3c6f..55e7862 100644
+--- a/include/wpa3_ext_supp.h
++++ b/include/wpa3_ext_supp.h
+@@ -48,7 +48,12 @@
+ #include "mbedtls/ecdh.h"
+ #include "mbedtls/hkdf.h"
+ #include "whd_buffer_api.h"
++#ifdef WHD_USE_WCM
+ #include "cy_wcm.h"
++#endif
++#ifdef WHD_CUSTOM_HAL
++#include "whd_custom_hal_sdio.h"
++#endif
+ #else
+ #include "wpa3_ext_supp_stubs.h"
+ #include "wpa3_ext_crypto_stubs.h"
+@@ -267,7 +272,9 @@ typedef struct
+ } wpa3_sae_auth_info_t;
+ 
+ void wpa3_auth_req_callbackfunc ( void *result_ptr, uint32_t len, whd_auth_status_t status, uint8_t *flag,  void *user_data);
++#ifdef WHD_USE_WCM
+ void wpa3_auth_join_callback (cy_wcm_event_t event, cy_wcm_event_data_t *event_data);
++#endif
+ 
+ /** struct wpa3_crypto_context_info_t for handling WPA EXT Supplicant crypto information */
+ typedef struct
+diff --git a/include/wpa3_ext_supp_utils.h b/include/wpa3_ext_supp_utils.h
+index aae1aaa..798112a 100644
+--- a/include/wpa3_ext_supp_utils.h
++++ b/include/wpa3_ext_supp_utils.h
+@@ -38,6 +38,9 @@
+ #include <stdbool.h>
+ #endif
+ 
++#if defined(WHD_CUSTOM_HAL) && defined(IMXRT)
++#include "fsl_debug_console.h"
++#endif
+ #ifndef CYPRESS_WEAK
+ #if defined(__ICCARM__)
+ #define CYPRESS_WEAK            __WEAK
+@@ -69,7 +72,11 @@
+ //#define WPA3_EXT_SUPPLICANT_DEBUG
+ 
+ #ifdef WPA3_EXT_LOG_ENABLE
++#if defined(WHD_CUSTOM_HAL) && defined(IMXRT)
++#define WPA3_EXT_LOG_MSG(args) { PRINTF args;}
++#else
+ #define WPA3_EXT_LOG_MSG(args) { printf args;}
++#endif
+ #else
+ #define WPA3_EXT_LOG_MSG(args)
+ #endif
+diff --git a/source/wpa3_ext_supp.c b/source/wpa3_ext_supp.c
+index 972fa05..feb92fb 100644
+--- a/source/wpa3_ext_supp.c
++++ b/source/wpa3_ext_supp.c
+@@ -34,7 +34,12 @@
+ #include "wpa3_ext_supp.h"
+ #include "cy_result.h"
+ 
++#if defined(WHD_CUSTOM_HAL) && !defined(WHD_USE_WCM)
++extern whd_result_t whd_custom_get_wifi_interface(whd_interface_type_t interface_type, whd_interface_t *iface);
++#else
+ extern cy_rslt_t cy_wcm_get_whd_interface(cy_wcm_interface_t interface_type, whd_interface_t *whd_iface);
++#endif
++
+ bool wpa3_sae_supplicant_deinit_done = true;
+ bool wpa3_sae_wcm_registered_callback = false;
+ bool wpa3_sae_workspace_cleanup_initiated = false;
+@@ -1291,7 +1296,11 @@ cy_rslt_t wpa3_supplicant_init_workspace ( wpa3_supplicant_workspace_t ** wksp)
+     }
+ 
+     /* Get WHD interface */
++#if defined(WHD_CUSTOM_HAL) && !defined(WHD_USE_WCM)
++    result =  whd_custom_get_wifi_interface((whd_interface_type_t)WPA3_STA_INTERFACE, &(workspace->interface));
++#else
+     result =  cy_wcm_get_whd_interface((cy_wcm_interface_t)WPA3_STA_INTERFACE, &(workspace->interface));
++#endif
+     if ( result != CY_RSLT_SUCCESS )
+     {
+         WPA3_EXT_LOG_MSG(("WPA3-EXT-SUPP:WHD get interface failed result=%lx\n", result));
+@@ -1325,6 +1334,7 @@ cy_rslt_t wpa3_supplicant_init_workspace ( wpa3_supplicant_workspace_t ** wksp)
+         result = WPA3_EXT_CRYPTO_ERROR;
+     }
+ 
++#ifdef WHD_USE_WCM
+     /* register callback with WCM */
+     if ( wpa3_sae_wcm_registered_callback  == false)
+     {
+@@ -1332,6 +1342,7 @@ cy_rslt_t wpa3_supplicant_init_workspace ( wpa3_supplicant_workspace_t ** wksp)
+         WPA3_EXT_LOG_MSG(("WPA3-EXT-SUPP:cy_wcm_register_event_callback result=%ld\n", result));
+         wpa3_sae_wcm_registered_callback = true;
+     }
++#endif
+ 
+     *wksp = workspace;
+ 
+@@ -1428,12 +1439,14 @@ cy_rslt_t wpa3_supplicant_deinit_workspace(wpa3_supplicant_workspace_t *wksp)
+     }
+     wpa3_sae_supplicant_deinit_done = true;
+ 
++#ifdef WHD_USE_WCM
+     if ( wpa3_sae_wcm_registered_callback == true)
+     {
+         result = cy_wcm_deregister_event_callback(wpa3_auth_join_callback);
+         WPA3_EXT_LOG_MSG(("***WPA3-EXT-SUPP:SAE cy_wcm_deregister_event_callback result=%ld*** \n", result));
+         wpa3_sae_wcm_registered_callback = false;
+     }
++#endif
+     WPA3_EXT_LOG_MSG(("***WPA3-EXT-SUPP:SAE workspace deleted*** \n"));
+     return result;
+ }
+@@ -1529,6 +1542,7 @@ void wpa3_sae_cleanup_workspace(void)
+     }
+ }
+ 
++#ifdef WHD_USE_WCM
+ void wpa3_auth_join_callback (cy_wcm_event_t event, cy_wcm_event_data_t *event_data)
+ {
+     wpa3_supplicant_workspace_t* wksp = NULL;
+@@ -1575,6 +1589,7 @@ void wpa3_auth_join_callback (cy_wcm_event_t event, cy_wcm_event_data_t *event_d
+             break;
+     }
+ }
++#endif
+ 
+ void wpa3_sae_timer_expiry(cy_timer_callback_arg_t arg)
+ {

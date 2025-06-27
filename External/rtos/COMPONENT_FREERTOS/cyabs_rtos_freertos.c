@@ -161,13 +161,13 @@ cy_rslt_t cy_rtos_thread_create(cy_thread_t* thread, cy_thread_entry_fn_t entry_
             wrapper->sema = xSemaphoreCreateBinary();
             if(wrapper->sema == NULL)
             {
-		__asm("    bkpt    1");
+            	__asm("    bkpt    1");
             }
             wrapper->magic  = TASK_IDENT;
             wrapper->memptr = ident;
             if(!(((uint32_t)wrapper & CY_RTOS_ALIGNMENT_MASK) == 0UL))
             {
-		__asm("    bkpt    1");
+            	__asm("    bkpt    1");
             }
             *thread = xTaskCreateStatic((TaskFunction_t)entry_function, name, stack_size_rtos, arg,
                                         (UBaseType_t)priority, stack_rtos, &(wrapper->task));
@@ -175,7 +175,7 @@ cy_rslt_t cy_rtos_thread_create(cy_thread_t* thread, cy_thread_entry_fn_t entry_
 //                                                    (UBaseType_t)priority, stack_rtos, &(wrapper->task));
             if(!(((void*)*thread == (void*)&(wrapper->task)) || (*thread == NULL)))
             {
-		__asm("    bkpt    1");
+            	__asm("    bkpt    1");
             }
             status = CY_RSLT_SUCCESS;
         }
@@ -216,7 +216,7 @@ cy_rslt_t cy_rtos_thread_exit(void)
     {
         if(!false)
         {
-		__asm("    bkpt    1");
+        	__asm("    bkpt    1");
         }
     }
 

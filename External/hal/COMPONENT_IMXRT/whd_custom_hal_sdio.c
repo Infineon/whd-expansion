@@ -95,6 +95,13 @@ static const whd_oob_config_t OOB_CONFIG =
 
 static cyhal_sdio_t sdio_obj;
 
+whd_result_t whd_custom_get_wifi_interface(whd_interface_type_t interface_type, whd_interface_t *iface)
+{
+    CHECK_IFP_NULL(whd_driv->iflist[interface_type]);
+    *iface = whd_driv->iflist[interface_type];
+    return WHD_SUCCESS;
+}
+
 whd_driver_t whd_custom_get_wifi_driver(void)
 {
     return whd_driv;

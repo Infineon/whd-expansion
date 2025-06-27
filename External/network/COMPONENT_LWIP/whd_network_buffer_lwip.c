@@ -84,7 +84,7 @@ whd_result_t whd_get_host_buffer(whd_buffer_t* buffer, whd_buffer_dir_t directio
 
         if (NULL == p)
         {
-		cy_rtos_delay_milliseconds(1);
+        	cy_rtos_delay_milliseconds(1);
         }
     } while ((NULL == p) && (counter <= timeout_ms));
 
@@ -117,7 +117,7 @@ uint8_t* whd_host_buffer_get_current_piece_data_pointer(whd_buffer_t buffer)
 {
     if(buffer == NULL)
 	{
-	__asm("    bkpt    1");
+    	__asm("    bkpt    1");
 	}
     struct pbuf* pbuffer= (struct pbuf*)buffer;
     return (uint8_t*)pbuffer->payload;
@@ -131,7 +131,7 @@ uint16_t whd_host_buffer_get_current_piece_size(whd_buffer_t buffer)
 {
     if(buffer == NULL)
 	{
-	__asm("    bkpt    1");
+    	__asm("    bkpt    1");
 	}
     struct pbuf* pbuffer = (struct pbuf*)buffer;
     return (uint16_t)pbuffer->len;
@@ -145,7 +145,7 @@ whd_result_t whd_host_buffer_set_size(whd_buffer_t buffer, uint16_t size)
 {
     if(buffer == NULL)
 	{
-	__asm("    bkpt    1");
+    	__asm("    bkpt    1");
 	}
     struct pbuf* pbuffer = (struct pbuf*)buffer;
 
@@ -170,7 +170,7 @@ whd_result_t whd_host_buffer_add_remove_at_front(whd_buffer_t* buffer, int32_t a
 {
     if(buffer == NULL)
 	{
-	__asm("    bkpt    1");
+    	__asm("    bkpt    1");
 	}
     struct pbuf** pbuffer = (struct pbuf**)buffer;
 
