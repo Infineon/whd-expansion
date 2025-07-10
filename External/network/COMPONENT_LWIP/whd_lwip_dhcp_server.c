@@ -34,7 +34,7 @@
 /** @file
  *  Implementation of a simple DHCP server
  */
-
+#ifdef WHD_NETWORK_LWIP
 #include "lwip/err.h"
 #include "lwip/api.h"
 #include "lwip/netif.h"
@@ -1017,4 +1017,4 @@ static cy_rslt_t internal_packet_create( cy_lwip_packet_t** packet, uint16_t con
 #endif //LWIP_IPV4
 
 #endif // (LWIP_NETCONN || LWIP_SOCKET)
-
+#endif /* WHD_NETWORK_LWIP */

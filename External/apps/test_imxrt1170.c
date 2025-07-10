@@ -1,4 +1,4 @@
- /*
+/*
  * Test application for IMXRT1170 + H1A1 to join and ping an AP
  */
 #if defined(WHD_CUSTOM_HAL) && defined(IMXRT)
@@ -18,15 +18,20 @@
 #include "cyhal_gpio.h"
 #include "cyhal_sdio.h"
 #include "cyabs_rtos.h"
-#include "whd_network_mw_core.h"
+#include "cy_network_mw_core.h"
 #include "whd_custom_hal_sdio.h"
 #include "wpa3_wcm_intf.h"
+#ifdef WHD_USE_WCM
+#include "cy_wcm.h"
+#endif /* WHD_USE_WCM */
 
 /* Enable this for Soft AP bring up sample code */
 //#define SAP
 
 #define WIFI_TASK_PRIO (3)
-#define WIFI_TASK_STACK_SIZE (1024*4)
+#define WIFI_TASK_STACK_SIZE (1024*10)
+/* The interface count needs to match with WCM */
+#define MAX_WHD_INTERFACES                           2
 
 TaskHandle_t wifi_task_handler;
 __attribute__((aligned(8))) uint8_t wifi_app_stack[WIFI_TASK_STACK_SIZE] = {0};
@@ -38,7 +43,13 @@ cyhal_sdio_t* obj = &sdio_obj;
 
 whd_driver_t whd_driver;
 
-whd_interface_t whd_ifs[2];
+extern whd_interface_t whd_ifs[MAX_WHD_INTERFACES];
+
+#ifdef WHD_USE_WCM
+/* wcm parameters */
+static cy_wcm_config_t wcm_config;
+static cy_wcm_connect_params_t conn_params;
+#endif
 
 #ifdef SAP
 typedef enum
@@ -52,27 +63,81 @@ typedef enum
 #define SOFTAP_PASSWORD                              "AP_PASSWORD"
 #define SOFTAP_SECURITY_TYPE                         WHD_SECURITY_WPA2_AES_PSK
 #define SOFTAP_CHANNEL                               11
+#ifdef WHD_USE_WCM
+#define SOFTAP_BAND                                  CY_WCM_WIFI_BAND_2_4GHZ
+#else
 #define SOFTAP_BAND                                  WHD_BAND_2_4GHZ
+#endif /* WHD_USE_WCM */
 #define SOFTAP_IP_ADDRESS                            MAKE_IPV4_ADDRESS(192, 168, 0,  2)
 #define SOFTAP_NETMASK                               MAKE_IPV4_ADDRESS(255, 255, 255, 0)
 #define SOFTAP_GATEWAY                               MAKE_IPV4_ADDRESS(192, 168, 0,  2)
-
+#ifdef WHD_USE_WCM
+static const cy_wcm_ip_setting_t ap_ip_settings =
+{
+    INITIALISER_IPV4_ADDRESS( .ip_address, SOFTAP_IP_ADDRESS),
+    INITIALISER_IPV4_ADDRESS( .netmask,    SOFTAP_NETMASK),
+    INITIALISER_IPV4_ADDRESS( .gateway,    SOFTAP_GATEWAY),
+};
+#else
 static const whd_network_static_ip_addr_t ap_ip_settings =
 {
     INITIALISER_IPV4_ADDRESS( .addr, SOFTAP_IP_ADDRESS),
     INITIALISER_IPV4_ADDRESS( .netmask,    SOFTAP_NETMASK),
     INITIALISER_IPV4_ADDRESS( .gateway,    SOFTAP_GATEWAY),
 };
+#endif /* WHD_USE_WCM */
 #else
 #define WIFI_SSID                                   "WIFI_SSID"
 #define WIFI_PASSWORD                               "WIFI_PASSWORD"
+#ifdef WHD_USE_WCM
+#define WIFI_SECURITY                               CY_WCM_SECURITY_WPA2_AES_PSK
+#else
 #define WIFI_SECURITY                               WHD_SECURITY_WPA2_AES_PSK
-#define CONNECT_RETRY_COUNT                         10
-#endif
+#endif /* WHD_USE_WCM */
+#define CONNECT_RETRY_COUNT                         5
+#ifdef WHD_USE_WCM
+#define WIFI_BAND                                   CY_WCM_WIFI_BAND_ANY
+static void get_ip_string(char* buffer, uint32_t ip)
+{
+    sprintf(buffer, "%lu.%lu.%lu.%lu",
+            (unsigned long)(ip      ) & 0xFF,
+            (unsigned long)(ip >>  8) & 0xFF,
+            (unsigned long)(ip >> 16) & 0xFF,
+            (unsigned long)(ip >> 24) & 0xFF);
+}
+#endif /* WHD_USE_WCM */
+#endif /* SAP */
 
 #ifdef SAP
 cy_rslt_t StartSoftAP()
 {
+#ifdef WHD_USE_WCM
+    cy_rslt_t result = CY_RSLT_SUCCESS ;
+    cy_wcm_ap_config_t ap_conf;
+    cy_wcm_ip_address_t ip_addr;
+    uint32_t elapsed_time_ms;
+    char ipstr[IP_STR_LEN];
+    memset(&ap_conf, 0, sizeof(cy_wcm_ap_config_t));
+    memset(&ip_addr, 0, sizeof(cy_wcm_ip_address_t));
+
+    ap_conf.channel = SOFTAP_CHANNEL;
+    ap_conf.band = SOFTAP_BAND;
+    memcpy(ap_conf.ap_credentials.SSID, SOFTAP_SSID, strlen(SOFTAP_SSID) + 1);
+    memcpy(ap_conf.ap_credentials.password, SOFTAP_PASSWORD, strlen(SOFTAP_PASSWORD) + 1);
+    ap_conf.ap_credentials.security = SOFTAP_SECURITY_TYPE;
+    ap_conf.ip_settings.ip_address = ap_ip_settings.ip_address;
+    ap_conf.ip_settings.netmask = ap_ip_settings.netmask;
+    ap_conf.ip_settings.gateway = ap_ip_settings.gateway;
+
+    PRINTF("\n***** Starting '%s' AP ***** \n", ap_conf.ap_credentials.SSID);
+
+    result = cy_wcm_start_ap(&ap_conf);
+
+    if (result == CY_RSLT_SUCCESS)
+    {
+        PRINTF("%s Started\n", ap_conf.ap_credentials.SSID);
+    }
+#else
     cy_rslt_t res = CY_RSLT_SUCCESS ;
     whd_nw_ip_address_t ipv4_addr;
     char ip_str[IP_STR_LEN];
@@ -145,27 +210,72 @@ cy_rslt_t StartSoftAP()
         return res;
     }
     return res;
+#endif /* WHD_USE_WCM */
 }
 #else
-
-int mbedtls_hardware_poll(void *data, unsigned char *output, size_t len, size_t *olen)
-{
-	cy_time_t seed;
-	cy_rtos_get_time(&seed);
-
-	srand(seed);
-
-	 *olen = 0;
-
-	    for (size_t i = 0; i < len; i++) {
-            output[i] = rand() % seed;
-	    }
-	    *olen = len;
-	    return 0;
-}
-
 cy_rslt_t wifi_connect(void)
 {
+#ifdef WHD_USE_WCM
+    cy_rslt_t res ;
+
+    const char *ssid = WIFI_SSID;
+    const char *key = WIFI_PASSWORD;
+    cy_wcm_wifi_band_t band = WIFI_BAND;
+    cy_wcm_ip_address_t ip_addr;
+    cy_wcm_ip_address_t gateway_ip_addr;
+    char ipstr[IP_STR_LEN];
+    uint32_t elapsed_time_ms;
+    whd_network_interface_context *nw_if_ctx;
+
+    memset(&conn_params, 0, sizeof(cy_wcm_connect_params_t));
+
+    memcpy(&conn_params.ap_credentials.SSID, ssid, strlen(ssid) + 1);
+    memcpy(&conn_params.ap_credentials.password, key, strlen(key) + 1);
+    conn_params.ap_credentials.security = WIFI_SECURITY;
+    conn_params.band = band;
+
+    PRINTF("Attempting Connection\n");
+    for(int i=1; i<= CONNECT_RETRY_COUNT; i++)
+        {
+            PRINTF("Connecting to %s, Attempt %d/%d\n", WIFI_SSID, i, CONNECT_RETRY_COUNT);
+            res = cy_wcm_connect_ap(&conn_params, &ip_addr);
+            if(res == CY_RSLT_SUCCESS)
+                break;
+            else if(i!=CONNECT_RETRY_COUNT)
+            {
+                PRINTF("Join failed, retrying...\n");
+            }
+            else
+            {
+                PRINTF("Connect failed, exceeded maximum retries\n");
+            }
+        }
+
+    if(!res)
+    {
+        PRINTF("Successfully joined wifi network '%s , result = %ld'\n", ssid, (long)res);
+        get_ip_string(ipstr, ip_addr.ip.v4);
+        PRINTF("IP Address %s assigned\n", ipstr);
+
+        res = cy_wcm_get_gateway_ip_address(CY_WCM_INTERFACE_TYPE_STA, &gateway_ip_addr);
+        if(!res)
+        {
+            get_ip_string(ipstr, gateway_ip_addr.ip.v4);
+            PRINTF("Gateway IP Address %s assigned\n", ipstr);
+            while(true)
+            {
+                res = cy_wcm_ping(CY_WCM_INTERFACE_TYPE_STA, &gateway_ip_addr, 3000, &elapsed_time_ms);
+                if (res == CY_RSLT_SUCCESS)
+                {
+                    PRINTF("Ping Successful. Time elapsed = %lu ms\n", elapsed_time_ms);
+                }
+                    else
+                        PRINTF("Ping failed %ld\n", res);
+            }
+        }
+    }
+
+#else
     whd_network_static_ip_addr_t static_ip;
     whd_nw_ip_address_t gateway_ipv4_addr;
     whd_nw_ip_address_t ipv4_addr;
@@ -187,34 +297,34 @@ cy_rslt_t wifi_connect(void)
     cy_rslt_t result = CY_RSLT_SUCCESS;
 
     for(int i=1; i<= CONNECT_RETRY_COUNT; i++)
-    {
-        PRINTF("Connecting to %s, Attempt %d/%d\n", ssid.value, i, CONNECT_RETRY_COUNT);
-		if(security == WHD_SECURITY_WPA3_SAE)
-		{
-			result = wpa3_supplicant_sae_start(ssid.value, ssid.length, key, keylen);
-			if(result != CY_RSLT_SUCCESS)
-			{
-				PRINTF("SAE Failed\n");
-				continue;
-			}
-			else
-			{
-				PRINTF("SAE successful\n");
-			}
-		}
+        {
+            PRINTF("Connecting to %s, Attempt %d/%d\n", ssid.value, i, CONNECT_RETRY_COUNT);
+            if(security == WHD_SECURITY_WPA3_SAE)
+            {
+                result = wpa3_supplicant_sae_start(ssid.value, ssid.length, key, keylen);
+                if(result != CY_RSLT_SUCCESS)
+                {
+                    PRINTF("SAE Failed\n");
+                    continue;
+                }
+                else
+                {
+                    PRINTF("SAE successful\n");
+                }
+            }
 
-        result = whd_wifi_join(whd_ifs[CY_NET_INTERFACE_TYPE_STA] , &ssid, security, key, keylen);
-        if(result == CY_RSLT_SUCCESS)
-            break;
-        else if(i!=CONNECT_RETRY_COUNT)
-        {
-            PRINTF("Join failed, retrying...\n");
+            result = whd_wifi_join(whd_ifs[CY_NET_INTERFACE_TYPE_STA] , &ssid, security, key, keylen);
+            if(result == CY_RSLT_SUCCESS)
+                break;
+            else if(i!=CONNECT_RETRY_COUNT)
+            {
+                PRINTF("Join failed, retrying...\n");
+            }
+            else
+            {
+                PRINTF("Connect failed, exceeded maximum retries\n");
+            }
         }
-        else
-        {
-            PRINTF("Connect failed, exceeded maximum retries\n");
-        }
-    }
 
     if(result == CY_RSLT_SUCCESS)
     {
@@ -268,8 +378,9 @@ cy_rslt_t wifi_connect(void)
         else
             PRINTF("Ping failed %ld\n", result);
     }
+#endif /* WHD_USE_WCM */
 }
-#endif
+#endif /* SAP */
 
 static void wifi_task(void *arg)
 {
@@ -277,16 +388,23 @@ static void wifi_task(void *arg)
 
     cy_rslt_t result = CY_RSLT_SUCCESS;
 
+#ifdef WHD_USE_WCM
+#ifdef SAP
+    wcm_config.interface = CY_WCM_INTERFACE_TYPE_AP_STA;
+#else
+    wcm_config.interface = CY_WCM_INTERFACE_TYPE_STA;
+#endif /* SAP */
+    result = cy_wcm_init(&wcm_config);
+#else
     whd_network_init();
-
     result = whd_custom_wifi_init(
 #ifdef SAP
     &whd_ifs[CY_NET_INTERFACE_TYPE_AP]
 #else
     &whd_ifs[CY_NET_INTERFACE_TYPE_STA]
-#endif
+#endif /* SAP */
     );
-
+#endif /* WHD_USE_WCM */
     if(result == CY_RSLT_SUCCESS)
     {
         PRINTF("\nIMXRT WIFI ON\n");
@@ -298,7 +416,7 @@ static void wifi_task(void *arg)
         }
 #else
         wifi_connect();
-#endif
+#endif /* SAP */
     }
     else
         PRINTF("wifi init failed %ld\n", result);
@@ -319,6 +437,6 @@ int main(void)
 
     vTaskStartScheduler();
 
-     return 0;
+    return 0;
 }
 #endif /* WHD_CUSTOM_HAL && IMXRT */

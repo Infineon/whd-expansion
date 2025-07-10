@@ -70,6 +70,10 @@ void whd_custom_hal_sdio_register_irq(cyhal_sdio_t *obj, cyhal_sdio_irq_handler_
 
 whd_result_t whd_custom_wifi_init(whd_interface_t *interface);
 
+whd_result_t whd_custom_wifi_init_secondary(whd_interface_t *interface, whd_mac_t *mac_address);
+
+whd_result_t whd_custom_wifi_deinit(whd_interface_t interface);
+
 whd_driver_t whd_custom_get_wifi_driver(void);
 
 whd_result_t whd_custom_get_wifi_interface(whd_interface_type_t interface_type, whd_interface_t *iface);

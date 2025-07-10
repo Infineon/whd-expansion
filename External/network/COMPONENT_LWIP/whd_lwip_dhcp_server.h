@@ -34,7 +34,7 @@
 /** @file
  *  Interface header for a simple DHCP server
  */
-
+#ifdef WHD_NETWORK_LWIP
 #pragma once
 
 #if (LWIP_NETCONN || LWIP_SOCKET)
@@ -42,7 +42,7 @@
 #if LWIP_IPV4
 
 
-#include "whd_network_mw_core.h"
+#include "cy_network_mw_core.h"
 #include "cy_worker_thread.h"
 
 #ifdef __cplusplus
@@ -175,3 +175,4 @@ cy_rslt_t whd_lwip_dhcp_server_stop(cy_lwip_dhcp_server_t *server);
 #endif //LWIP_IPV4
 
 #endif /* LWIP_NETCONN || LWIP_SOCKET */
+#endif /* WHD_NETWORK_LWIP */

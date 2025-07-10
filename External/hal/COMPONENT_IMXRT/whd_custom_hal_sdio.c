@@ -47,7 +47,7 @@ static sdio_block_size_t find_optimal_block_size(uint32_t);
 
 void whd_custom_sdio_callback(void *);
 
-static whd_driver_t whd_driv;
+whd_driver_t whd_driv;
 extern whd_resource_source_t resource_ops;
 extern whd_result_t whd_get_host_buffer(whd_buffer_t* buffer, whd_buffer_dir_t direction,
                                 uint16_t size, uint32_t timeout_ms);
@@ -142,6 +142,22 @@ whd_result_t whd_custom_wifi_init(whd_interface_t *interface)
     }
 
 	return result;
+}
+
+whd_result_t whd_custom_wifi_init_secondary(whd_interface_t *interface, whd_mac_t *mac_address)
+{
+    return whd_add_secondary_interface(whd_driv, mac_address, interface);
+}
+
+whd_result_t whd_custom_wifi_deinit(whd_interface_t interface)
+{
+    whd_result_t result = whd_wifi_off(interface);
+
+    result = whd_deinit(interface);
+
+    whd_bus_sdio_detach(whd_driv);
+
+    return result;
 }
 
 whd_result_t whd_custom_hal_sdio_init(cyhal_sdio_t *obj)

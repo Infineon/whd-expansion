@@ -23,7 +23,10 @@
  *      - Network Interface: Called by WHD to pass received data to the network stack, to send an ethernet frame to WHD, etc.
  */
 #include "whd.h"
-
+#if defined(WHD_NETWORK_LWIP) && defined(WHD_USE_WCM)
+#include "cy_network_mw_core.h"
+#include "cy_nw_helper.h"
+#endif
 #ifndef INC_WHD_NETWORK_TYPES_H_
 #define INC_WHD_NETWORK_TYPES_H_
 
@@ -31,7 +34,33 @@
 extern "C"
 {
 #endif
+/* The below typedefs and translations are required when usnig WCM + whd-expansion without other dependencies */
+#if defined(WHD_NETWORK_LWIP) && defined(WHD_USE_WCM)
+typedef whd_network_static_ip_addr_t cy_network_static_ip_addr_t;
+typedef whd_network_interface_context cy_network_interface_context;
+typedef whd_network_hw_interface_type_t cy_network_hw_interface_type_t;
+typedef whd_nw_ip_address_t cy_nw_ip_address_t;
+typedef whd_network_ipv6_type_t cy_network_ipv6_type_t;
+typedef whd_nw_ip_mac_t cy_nw_ip_mac_t;
 
+#define cy_network_init(void) whd_network_init(void)
+#define cy_network_get_ip_address(iface_context, ip_addr) whd_network_get_ip_address(iface_context, ip_addr)
+#define cy_network_get_gateway_ip_address(iface_context, gateway_addr) whd_network_get_gateway_ip_address(iface_context, gateway_addr)
+#define cy_network_get_ipv6_address(iface_context, type, ip_addr) whd_network_get_ipv6_address(iface_context, type, ip_addr)
+#define cy_network_ip_up(iface_context) whd_network_ip_up(iface_context)
+#define cy_network_ip_down(iface_context) whd_network_ip_down(iface_context)
+#define cy_network_dhcp_renew(iface_context) whd_network_dhcp_renew(iface_context)
+#define cy_network_add_nw_interface(iface_type, iface_idx, hw_interface, mac_address, ipaddr, iface_context) whd_network_add_nw_interface(iface_type, iface_idx, hw_interface, mac_address, ipaddr, iface_context)
+#define cy_network_remove_nw_interface(iface_context) whd_network_remove_nw_interface(iface_context)
+#define cy_network_register_ip_change_cb(iface_context, cb, user_data) whd_network_register_ip_change_cb(iface_context, cb, user_data)
+#define cy_network_get_netmask_address(iface_context, net_mask_addr) whd_network_get_netmask_address(iface_context, net_mask_addr)
+#define cy_network_get_gateway_mac_address(iface_context, mac_addr) whd_network_get_gateway_mac_address(iface_context, mac_addr)
+#define cy_network_ping(if_ctx, address, timeout_ms, elapsed_time_ms) whd_network_ping(if_ctx, address, timeout_ms, elapsed_time_ms)
+#define cy_nw_aton(char_ptr, addr) whd_nw_aton(char_ptr, addr)
+#define cy_nw_aton_ipv6(char_ptr, addr) whd_nw_aton_ipv6(char_prt, addr)
+#define cy_nw_ntoa(addr, ip_str) whd_nw_ntoa(addr, ip_str)
+#define cy_nw_ntoa_ipv6(addr, ip_str) whd_nw_ntoa_ipv6(addr, ip_str)
+#endif
 /******************************************************
 *                  Constants
 ******************************************************/

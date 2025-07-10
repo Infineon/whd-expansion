@@ -53,7 +53,7 @@
 #include "lwip/inet.h"
 #include "lwip/netdb.h"
 
-#include "whd_network_mw_core.h"
+#include "cy_network_mw_core.h"
 #include "whd_lwip_dhcp_server.h"
 #include "cy_result.h"
 
@@ -184,6 +184,127 @@ cy_rslt_t cy_prng_add_entropy( const void* buffer, uint32_t buffer_length );
 
 #if defined(CYBSP_WIFI_CAPABLE)
 
+bool whd_nw_aton(const char *char_ptr , whd_nw_ip_address_t *addr)
+{
+    uint8_t byte = 0;
+    uint8_t byte_cnt = 1;
+    uint32_t ip_addr = 0;
+    char ch;
+
+    if(char_ptr == NULL || addr == NULL)
+    {
+        return 1;
+    }
+
+    while(*char_ptr != '\0' || byte_cnt <= 4)
+    {
+        ch = *char_ptr;
+        if(ch == '.' || ch == '\0')
+        {
+            if(byte_cnt == 1 && ch == '.')
+            {
+                ip_addr = ip_addr | (uint32_t)byte;
+            }
+            else if(byte_cnt == 2 && ch == '.')
+            {
+                ip_addr = ip_addr | (((uint32_t)byte) << 8);
+            }
+            else if(byte_cnt == 3 && ch == '.')
+            {
+                ip_addr = ip_addr | (((uint32_t)byte) << 16);
+            }
+            else if(byte_cnt == 4 && ch == '\0')
+            {
+                ip_addr = ip_addr | (((uint32_t)byte) << 24);
+                break;
+            }
+            else
+            {
+                break;
+            }
+            byte = 0;
+            byte_cnt++;
+            char_ptr++;
+            continue;
+        }
+        byte = (byte * 10) + (ch - '0');
+        char_ptr++;
+    }
+    if(byte_cnt < 4)
+    {
+        return 1;
+    }
+    addr->version = NW_IP_IPV4;
+    addr->ip.v4 = ip_addr;
+
+    return 0;
+}
+
+bool whd_nw_aton_ipv6(const char *char_ptr , whd_nw_ip_address_t *addr)
+{
+    char hex[4] = {0},ch;
+    uint8_t byte_cnt = 1, i=0;
+    uint16_t byte = 0, ans[8];
+    uint32_t temp = 0;
+
+    if(char_ptr == NULL || addr == NULL)
+    {
+        return 1;
+    }
+
+    while(*char_ptr != '\0' || byte_cnt < 8)
+    {
+        if(byte_cnt > 8)
+        {
+            break;
+        }
+        ch = *char_ptr;
+        if(ch == ':')
+        {
+            byte = str_to_decimal(hex);
+            ans[byte_cnt-1] = byte;
+            i = 0;
+            byte_cnt++;
+            char_ptr++;
+            continue;
+        }
+        else if(ch == '\0' && byte_cnt == 8)
+        {
+            byte = str_to_decimal(hex);
+            ans[byte_cnt-1] = byte;
+            i = 0;
+            byte_cnt++;
+            char_ptr++;
+            break;
+        }
+        else if(ch == '\0' && byte_cnt != 8)
+        {
+            break;
+        }
+        hex[i] = ch;
+        i++;
+        char_ptr++;
+    }
+    if(byte_cnt != 8)
+    {
+        return 1;
+    }
+    byte = str_to_decimal(hex);
+    ans[byte_cnt-1] = byte;
+
+    addr->version = NW_IP_IPV6;
+
+    temp = (((uint32_t)ans[0])<<16) | (uint32_t)(ans[1]);
+    addr->ip.v6[0] = NW_HTONL(temp);
+    temp = ((uint32_t)ans[2]<<16) | (uint32_t)ans[3];
+    addr->ip.v6[1] = NW_HTONL(temp);
+    temp = ((uint32_t)ans[4]<<16) | (uint32_t)ans[5];
+    addr->ip.v6[2] = NW_HTONL(temp);
+    temp = ((uint32_t)ans[6]<<16) | (uint32_t)ans[7];
+    addr->ip.v6[3] = NW_HTONL(temp);
+    return 0;
+}
+
 bool whd_nw_ntoa (whd_nw_ip_address_t *addr, char *ip_str)
 {
     uint8_t index = 0;
@@ -200,11 +321,22 @@ bool whd_nw_ntoa (whd_nw_ip_address_t *addr, char *ip_str)
         ip_addr = ip_addr >> 8;
         index++;
     }
-    memset(ip_str,0, (15*sizeof(char)));
+    memset(ip_str,0, (IPV4_MAX_STR_LEN*sizeof(char)));
     sprintf(ip_str, "%d.%d.%d.%d", arr[0],arr[1],arr[2],arr[3]);
     return 0;
 }
 
+bool whd_nw_ntoa_ipv6 (whd_nw_ip_address_t *addr, char *ip_str)
+{
+    if(addr == NULL || ip_str ==NULL)
+    {
+        printf("Input IPV6 address is NULL\n");
+        return 1;
+    }
+    memset(ip_str,0, (IPV6_MAX_STR_LEN*sizeof(char)));
+    sprintf(ip_str, "%0x:%0x:%0x:%0x", (unsigned int)NW_HTONL(addr->ip.v6[0]), (unsigned int)NW_HTONL(addr->ip.v6[1]), (unsigned int)NW_HTONL(addr->ip.v6[2]), (unsigned int)NW_HTONL(addr->ip.v6[3]));
+    return 0;
+}
 /*
  * This function takes packets from the radio driver and passes them into the
  * lwIP stack. If the stack is not initialized, or if the lwIP stack does not
@@ -2028,5 +2160,28 @@ cy_rslt_t cy_prng_add_entropy( const void* buffer, uint32_t buffer_length )
     return CY_RSLT_SUCCESS;
 }
 #endif
+/*
+ * This is a pseudo random number generator for being used by the mbedtls library
+ * Ideally, platform specific TRNG functionality should be used for this purpose
+ * If the platform SDK or source provides such a functionality, please use that
+ * instead of the below function
+ */
+#ifdef IMXRT
+int mbedtls_hardware_poll(void *data, unsigned char *output, size_t len, size_t *olen)
+{
+    cy_time_t seed;
+    cy_rtos_get_time(&seed);
 
+    srand(seed);
+
+    *olen = 0;
+
+    for (size_t i = 0; i < len; i++)
+    {
+        output[i] = rand() % seed;
+    }
+        *olen = len;
+        return 0;
+}
+#endif /* IMXRT */
 #endif /* WHD_NETWORK */
