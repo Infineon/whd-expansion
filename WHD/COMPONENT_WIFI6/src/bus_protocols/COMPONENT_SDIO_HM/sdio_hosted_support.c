@@ -191,7 +191,7 @@ static void sdio_hm_q_buf_release(sdio_handler_t sdio_hm, sdio_tx_q_node_t q_nod
             PRINT_HM_ERROR(("release whd buffer failed: %ld\n", whd_result));
         }
     } else {
-        free(q_node->buf_ptr);
+        whd_mem_free(q_node->buf_ptr);
     }
 }
 
@@ -231,7 +231,7 @@ static cy_rslt_t sdio_hm_q_init(sdio_tx_info_t txi)
     for (i = 0; i < SDIO_TX_Q_CNT; i++) {
         txq_node = (sdio_tx_q_node_t)whd_mem_malloc(sizeof(*txq_node));
         if (!txq_node) {
-            PRINT_HM_ERROR(("txq_node malloc failed\n"));
+            PRINT_HM_ERROR(("txq_node whd_mem_malloc failed\n"));
             return CYHAL_SDIO_RSLT_ERR_UNSUPPORTED;
         }
         CHK_RET(cy_linked_list_insert_node_at_front(&txi->tx_idle_q, &txq_node->node));
@@ -338,7 +338,7 @@ static void sdio_hm_wcm_event_callback(cy_wcm_event_t event, cy_wcm_event_data_t
 
     inf_event = (inf_nw_event_t *)whd_mem_malloc(sizeof(*inf_event));
     if (!inf_event) {
-        PRINT_HM_ERROR(("inf_nw_event_t malloc failed\n"));
+        PRINT_HM_ERROR(("inf_nw_event_t whd_mem_malloc failed\n"));
         return;
     }
 
@@ -380,7 +380,7 @@ static void sdio_hm_wcm_event_callback(cy_wcm_event_t event, cy_wcm_event_data_t
             break;
         default:
             HM_EVENT_MSG(("unsupported event %d\n", event));
-            free(inf_event);
+            whd_mem_free(inf_event);
             return;
     }
 
@@ -388,7 +388,7 @@ static void sdio_hm_wcm_event_callback(cy_wcm_event_t event, cy_wcm_event_data_t
     if (result != SDIOD_STATUS_SUCCESS) {
         sdio_hm->tx_info->err_event++;
         PRINT_HM_ERROR(("tx event failed: 0x%lx\n", result));
-        free(inf_event);
+        whd_mem_free(inf_event);
     }
 }
 
@@ -887,13 +887,13 @@ static cy_rslt_t sdio_hm_init_tx(sdio_handler_t sdio_hm)
     whd_driver_t whd = sdio_hm->ifp->whd_driver;
     sdio_tx_info_t txi;
 
-    txi = (sdio_tx_info_t)malloc(sizeof(*txi));
+    txi = (sdio_tx_info_t)whd_mem_malloc(sizeof(*txi));
     if (!txi) {
         PRINT_HM_ERROR(("alloc tx_info failed\n"));
         return CYHAL_SDIO_RSLT_ERR_CONFIG;
     }
 
-    memset(txi, 0, sizeof(*txi));
+    whd_mem_memset(txi, 0, sizeof(*txi));
     sdio_hm->tx_info = txi;
 
     CHK_RET(sdio_hm_q_init(txi));
@@ -913,13 +913,13 @@ static cy_rslt_t sdio_hm_init_rx(sdio_handler_t sdio_hm)
 {
     sdio_rx_info_t rxi;
 
-    rxi = (sdio_rx_info_t)malloc(sizeof(*rxi));
+    rxi = (sdio_rx_info_t)whd_mem_malloc(sizeof(*rxi));
     if (!rxi) {
         PRINT_HM_ERROR(("alloc rx_info failed\n"));
         return CYHAL_SDIO_RSLT_ERR_CONFIG;
     }
 
-    memset(rxi, 0, sizeof(*rxi));
+    whd_mem_memset(rxi, 0, sizeof(*rxi));
     sdio_hm->rx_info = rxi;
 
     rxi->reserved_buffer = NULL;
@@ -1026,7 +1026,7 @@ static cy_rslt_t sdio_hm_tx_prepare(sdio_handler_t sdio_hm, uint8_t *data, uint1
     uint8_t *payload = sdio_hm->sdio_instance.buffer.tx_payload;
 
     if(data != NULL) {
-        memcpy(payload + SDIO_SW_HEADER_LEN, data, data_len);
+        whd_mem_memcpy(payload + SDIO_SW_HEADER_LEN, data, data_len);
     } else {
         data_len = 0;
     }
@@ -1044,7 +1044,7 @@ static void sdio_hm_proc_data(sdio_handler_t sdio_hm, uint8_t *data, uint16_t da
 
     packet = whd_buffer_get_current_piece_data_pointer(sdio_hm->ifp->whd_driver, rxi->current_buffer);
 
-    memcpy(packet, data, data_len);
+    whd_mem_memcpy(packet, data, data_len);
 
     /* create hash value */
     ret = sdio_arb_eth_packet_send_handle(data, (int *)&data_len);
@@ -1369,7 +1369,7 @@ cy_rslt_t sdio_hm_shutd_evt_to_host(void)
 
     inf_event = whd_mem_malloc(sizeof(*inf_event));
     if (!inf_event) {
-        PRINT_HM_ERROR(("inf_at_event_t malloc failed\n"));
+        PRINT_HM_ERROR(("inf_at_event_t whd_mem_malloc failed\n"));
         return WHD_MALLOC_FAILURE;
     }
 
@@ -1384,7 +1384,7 @@ cy_rslt_t sdio_hm_shutd_evt_to_host(void)
     if (result != SDIOD_STATUS_SUCCESS) {
         sdio_hm->tx_info->err_event++;
         PRINT_HM_ERROR(("tx event failed: 0x%lx\n", result));
-        free(inf_event);
+        whd_mem_free(inf_event);
     }
 
     return result;

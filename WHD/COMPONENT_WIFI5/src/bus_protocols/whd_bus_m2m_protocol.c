@@ -145,8 +145,8 @@ whd_result_t whd_bus_m2m_attach(whd_driver_t whd_driver, whd_m2m_config_t *whd_m
     whd_driver->bus_if   = &whd_bus_m2m_info;
     whd_driver->bus_priv = &whd_bus_priv;
 
-    memset(whd_driver->bus_if, 0, sizeof(whd_bus_info_t) );
-    memset(whd_driver->bus_priv, 0, sizeof(struct whd_bus_priv) );
+    whd_mem_memset(whd_driver->bus_if, 0, sizeof(whd_bus_info_t) );
+    whd_mem_memset(whd_driver->bus_priv, 0, sizeof(struct whd_bus_priv) );
 
     whd_driver->bus_priv->m2m_obj = m2m_obj;
     whd_driver->bus_priv->m2m_config = *whd_m2m_config;
@@ -419,7 +419,7 @@ static whd_result_t whd_bus_m2m_transfer_bytes(whd_driver_t whd_driver, whd_bus_
     if (direction == BUS_WRITE)
     {
         DISABLE_COMPILER_WARNING(diag_suppress = Pa039)
-        memcpy( (uint8_t *)address, data->data, size );
+        whd_mem_memcpy( (uint8_t *)address, data->data, size );
         ENABLE_COMPILER_WARNING(diag_suppress = Pa039)
         if (address == 0)
         {
@@ -437,7 +437,7 @@ static whd_result_t whd_bus_m2m_transfer_bytes(whd_driver_t whd_driver, whd_bus_
     else
     {
         DISABLE_COMPILER_WARNING(diag_suppress = Pa039)
-        memcpy(data->data, (uint8_t *)address, size);
+        whd_mem_memcpy(data->data, (uint8_t *)address, size);
         ENABLE_COMPILER_WARNING(diag_suppress = Pa039)
     }
 
@@ -708,7 +708,7 @@ static whd_result_t whd_bus_m2m_download_resource(whd_driver_t whd_driver, whd_r
         WPRINT_WHD_ERROR( ("%s: TRX header mismatch\n", __FUNCTION__) );
         return result;
     }
-    memcpy( (void *)TRANS_ADDR(address), image, image_size );
+    whd_mem_memcpy( (void *)TRANS_ADDR(address), image, image_size );
 #else
     uint32_t reset_instr = 0;
 
@@ -762,11 +762,11 @@ static whd_result_t whd_bus_m2m_write_wifi_nvram_image(whd_driver_t whd_driver)
     nvram_size_in_words = (~nvram_size_in_words << 16) | (nvram_size_in_words & 0x0000FFFF);
 
 #ifdef PROTO_MSGBUF
-    memcpy( (uint8_t *)TRANS_ADDR( (GET_C_VAR(whd_driver,
+    whd_mem_memcpy( (uint8_t *)TRANS_ADDR( (GET_C_VAR(whd_driver,
                                               ATCM_RAM_BASE_ADDRESS) + GET_C_VAR(whd_driver, CHIP_RAM_SIZE) - 4) ),
             (uint8_t *)&nvram_size_in_words, 4 );
 #else
-    memcpy( (uint8_t *)(GET_C_VAR(whd_driver, ATCM_RAM_BASE_ADDRESS) + GET_C_VAR(whd_driver, CHIP_RAM_SIZE) - 4),
+    whd_mem_memcpy( (uint8_t *)(GET_C_VAR(whd_driver, ATCM_RAM_BASE_ADDRESS) + GET_C_VAR(whd_driver, CHIP_RAM_SIZE) - 4),
             (uint8_t *)&nvram_size_in_words, 4 );
 #endif /* PROTO_MSGBUF */
 

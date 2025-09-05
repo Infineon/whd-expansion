@@ -1797,6 +1797,16 @@ typedef void (*whd_icmp_echo_req_callback_t)(whd_icmp_echo_req_event_data_t* eve
  */
 extern whd_result_t whd_wifi_icmp_echo_req_register_callback(whd_interface_t ifp, whd_icmp_echo_req_callback_t callback, whd_bool_t Register);
 
+/** Function to set wsec_info
+ *
+ *  @param ifp             Pointer to handle instance of whd interface
+ *  @param algos           Algorithm to be set
+ *  @param mask            Mask to be applied
+ *
+ *  @return WHD_SUCCESS or Error code
+ */
+extern whd_result_t whd_set_wsec_info_algos(whd_interface_t ifp, uint32_t algos, uint32_t mask);
+
 #if defined (COMPONENT_MTB_HAL)
 /** Process interrupts function for OOB gpio pin
  *  This API is a wrapper for GPIO HAL driver's "process interrupts" function

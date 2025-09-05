@@ -40,7 +40,7 @@
 cy_rslt_t cyhal_gpio_init(cyhal_gpio_t pin, cyhal_gpio_direction_t direction, cyhal_gpio_drive_mode_t drvMode,
                           bool initVal)
 {
-
+    return CY_RSLT_SUCCESS;
 }
 
 /** Uninitialize the gpio peripheral and the cyhal_gpio_t object

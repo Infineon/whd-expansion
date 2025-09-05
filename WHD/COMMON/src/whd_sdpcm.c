@@ -24,7 +24,7 @@
  */
 #ifndef PROTO_MSGBUF
 #include "whd_sdpcm.h"
-#include "bus_protocols/whd_bus_protocol_interface.h"
+#include "whd_bus_protocol_interface.h"
 #include "whd_endian.h"
 #include "whd_chip_constants.h"
 #include "whd_chip.h"

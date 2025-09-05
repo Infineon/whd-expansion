@@ -17,7 +17,7 @@
 
 #include "whd_debug.h"
 #include "whd_int.h"
-#include "bus_protocols/whd_bus_protocol_interface.h"
+#include "whd_bus_protocol_interface.h"
 
 /******************************************************
 *             Constants

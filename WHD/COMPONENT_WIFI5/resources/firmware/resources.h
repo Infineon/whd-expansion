@@ -26,8 +26,10 @@
 CY_SECTION_WHD(CY_STORAGE_WIFI_DATA) __attribute__((used))
 #endif
 
-const resource_hnd_t wifi_firmware_image;
+extern const resource_hnd_t wifi_firmware_image;
 extern const unsigned char wifi_firmware_image_data[];
+
+#ifndef RESOURCE_READ_FROM_C_FILE
 extern uint32_t wifi_firmware_image_size;
 #ifndef __IAR_SYSTEMS_ICC__
 #ifdef CY_STORAGE_WIFI_DATA
@@ -41,4 +43,6 @@ const resource_hnd_t wifi_firmware_image = { RESOURCE_IN_MEMORY, FW_IMAGE_SIZE, 
 #else
 const resource_hnd_t wifi_firmware_image = { RESOURCE_IN_MEMORY, (FW_IMAGE_SIZE - sizeof(trx_header_t)), {.mem = { (const char *) &wifi_firmware_image_data[sizeof(trx_header_t)] }}};
 #endif /* DM_43022C1 */
+#endif /* ifndef RESOURCE_READ_FROM_C_FILE */
+
 #endif /* ifndef INCLUDED_RESOURCES_H_ */

@@ -21,7 +21,7 @@
  */
 
 #include <string.h>
-#include "bus_protocols/whd_bus_common.h"
+#include "whd_bus_common.h"
 #include "bus_protocols/whd_bus_protocol_interface.h"
 #include "whd_debug.h"
 #include "whd_events_int.h"
@@ -102,7 +102,7 @@ whd_result_t whd_add_interface(whd_driver_t whd_driver, uint8_t bsscfgidx, uint8
 
         if ( (ifp = (whd_interface_t)whd_mem_malloc(sizeof(struct whd_interface) ) ) != NULL )
         {
-            memset(ifp, 0, (sizeof(struct whd_interface) ) );
+            whd_mem_memset(ifp, 0, (sizeof(struct whd_interface) ) );
             *ifpp = ifp;
             ifp->whd_driver = whd_driver;
 
@@ -110,15 +110,15 @@ whd_result_t whd_add_interface(whd_driver_t whd_driver, uint8_t bsscfgidx, uint8
             /* strncpy doesn't terminate with null if the src string is long */
             ifp->if_name[WHD_MSG_IFNAME_MAX - 1] = '\0';
             strncpy(ifp->if_name, name, sizeof(ifp->if_name) - 1);
-            memset(ifp->event_reg_list, WHD_EVENT_NOT_REGISTERED, sizeof(ifp->event_reg_list) );
+            whd_mem_memset(ifp->event_reg_list, WHD_EVENT_NOT_REGISTERED, sizeof(ifp->event_reg_list) );
             /* Primary interface takes 0 as default */
             ifp->ifidx = ifidx;
             ifp->bsscfgidx = bsscfgidx;
 
             if (mac_addr != NULL)
-                memcpy(ifp->mac_addr.octet, mac_addr->octet, sizeof(whd_mac_t) );
+                whd_mem_memcpy(ifp->mac_addr.octet, mac_addr->octet, sizeof(whd_mac_t) );
             else
-                memset(ifp->mac_addr.octet, 0, sizeof(whd_mac_t) );
+                whd_mem_memset(ifp->mac_addr.octet, 0, sizeof(whd_mac_t) );
 
             whd_driver->iflist[bsscfgidx] = ifp;
             whd_driver->if2ifp[ifidx] = bsscfgidx;
@@ -163,7 +163,7 @@ whd_result_t whd_init(whd_driver_t *whd_driver_ptr, whd_init_config_t *whd_init_
 
     if ( (whd_drv = (whd_driver_t)whd_mem_malloc(sizeof(struct whd_driver) ) ) != NULL )
     {
-        memset(whd_drv, 0, sizeof(struct whd_driver) );
+        whd_mem_memset(whd_drv, 0, sizeof(struct whd_driver) );
         *whd_driver_ptr = whd_drv;
         whd_drv->buffer_if = buffer_ops;
         whd_drv->network_if = network_ops;
@@ -423,7 +423,7 @@ whd_result_t whd_wifi_on(whd_driver_t whd_driver, whd_interface_t *ifpp)
         whd_assert("Could not get buffer for IOCTL", 0 != 0);
         return WHD_BUFFER_ALLOC_FAIL;
     }
-    memset(country_struct, 0, sizeof(wl_country_t) );
+    whd_mem_memset(country_struct, 0, sizeof(wl_country_t) );
 
     ptr = (uint32_t *)country_struct->ccode;
     *ptr = (uint32_t)whd_driver->internal_info.whd_wlan_status.country_code & 0x0000ffff;
@@ -460,7 +460,7 @@ whd_result_t whd_wifi_on(whd_driver_t whd_driver, whd_interface_t *ifpp)
             whd_assert("Could not get buffer for IOVAR", 0 != 0);
             return WHD_BUFFER_ALLOC_FAIL;
         }
-        memset(event_mask, 0, (size_t)WL_EVENTING_MASK_LEN);
+        whd_mem_memset(event_mask, 0, (size_t)WL_EVENTING_MASK_LEN);
         retval = whd_proto_set_iovar(ifp, buffer, 0);
     }
     if (retval != WHD_SUCCESS)

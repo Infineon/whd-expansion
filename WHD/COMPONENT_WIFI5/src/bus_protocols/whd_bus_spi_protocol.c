@@ -67,7 +67,12 @@
 #define SBSDIO_SB_OFT_ADDR_LIMIT  0x08000
 #define SBSDIO_SB_ACCESS_2_4B_FLAG  0x08000 /* with b15, maps to 32-bit SB access */
 
+#if defined(CONFIG_CYW43439)
+/* Delay before HT is available on the CYW43439 is over 1600 mSec */
+#define HT_AVAIL_TIMEOUT_MS    (2000)
+#else
 #define HT_AVAIL_TIMEOUT_MS    (1000)
+#endif  /* defined(CONFIG_CYW43439) */
 
 /* Taken from FALCON_5_90_195_26 dhd/sys/dhd_sdio.c. For 43362, MUST be >= 8 and word-aligned otherwise dongle fw crashes */
 #define SPI_F2_WATERMARK       (32)
@@ -180,7 +185,7 @@ whd_result_t whd_bus_spi_attach(whd_driver_t whd_driver, whd_spi_config_t *whd_s
         WPRINT_WHD_ERROR( ("Memory allocation failed for whd_bus_info in %s\n", __FUNCTION__) );
         return WHD_BUFFER_UNAVAILABLE_PERMANENT;
     }
-    memset(whd_bus_info, 0, sizeof(whd_bus_info_t) );
+    whd_mem_memset(whd_bus_info, 0, sizeof(whd_bus_info_t) );
 
     whd_driver->bus_if = whd_bus_info;
 
@@ -191,7 +196,7 @@ whd_result_t whd_bus_spi_attach(whd_driver_t whd_driver, whd_spi_config_t *whd_s
         WPRINT_WHD_ERROR( ("Memory allocation failed for whd_bus_priv in %s\n", __FUNCTION__) );
         return WHD_BUFFER_UNAVAILABLE_PERMANENT;
     }
-    memset(whd_driver->bus_priv, 0, sizeof(struct whd_bus_priv) );
+    whd_mem_memset(whd_driver->bus_priv, 0, sizeof(struct whd_bus_priv) );
 
     /* Pass the SPI object to bus private spi_obj pointer */
     whd_driver->bus_priv->spi_obj = spi_obj;
@@ -327,8 +332,8 @@ static whd_result_t whd_bus_spi_transfer_buffer(whd_driver_t whd_driver, whd_bus
     {
         if (aligned_header)
         {
-            /* use memcpy to get aligned event message */
-            memcpy(aligned_header, header, sizeof(*aligned_header) + size);
+            /* use whd_mem_memcpy to get aligned event message */
+            whd_mem_memcpy(aligned_header, header, sizeof(*aligned_header) + size);
             gspi_header =
                 (whd_bus_gspi_header_t *)( (char *)aligned_header->bus_header + MAX_BUS_HEADER_SIZE -
                                            sizeof(whd_bus_gspi_header_t) );
@@ -882,7 +887,7 @@ whd_result_t whd_bus_spi_read_register_value(whd_driver_t whd_driver, whd_bus_fu
         whd_bus_spi_transfer_bytes(whd_driver, BUS_READ, function, address, ( uint16_t )(value_length + padding),
                                    (whd_transfer_bytes_packet_t *)gspi_internal_buffer);
 
-    memcpy(value, data_ptr, value_length);
+    whd_mem_memcpy(value, data_ptr, value_length);
 
     return result;
 }

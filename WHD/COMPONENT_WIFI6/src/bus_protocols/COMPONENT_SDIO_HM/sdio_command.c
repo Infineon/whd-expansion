@@ -42,7 +42,7 @@ sdio_cmd_scan_handler(cy_wcm_scan_result_t *result_ptr, void *user_data, cy_wcm_
 
     inf_event = (inf_scan_event_t *)whd_mem_malloc(sizeof(*inf_event));
     if (!inf_event) {
-        PRINT_HM_ERROR(("inf_scan_event_t malloc failed\n"));
+        PRINT_HM_ERROR(("inf_scan_event_t whd_mem_malloc failed\n"));
         return;
     }
 
@@ -76,7 +76,7 @@ sdio_cmd_scan_handler(cy_wcm_scan_result_t *result_ptr, void *user_data, cy_wcm_
     if (result != SDIOD_STATUS_SUCCESS) {
         sdio_hm->tx_info->err_event++;
         PRINT_HM_ERROR(("tx event failed: 0x%lx\n", result));
-        free(inf_event);
+        whd_mem_free(inf_event);
     }
 }
 
@@ -88,7 +88,7 @@ sdio_cmd_get_rsp(uint32_t rsp_len, sdio_bcdc_header_t *cmd_bcdc)
 
     rsp = whd_mem_malloc(rsp_len);
     if (!rsp) {
-        PRINT_HM_ERROR(("rsp malloc failed\n"));
+        PRINT_HM_ERROR(("rsp whd_mem_malloc failed\n"));
         return NULL;
     }
 
@@ -110,7 +110,7 @@ sdio_cmd_send_rsp(sdio_command_t sdio_cmd, void *rsp, uint32_t rsp_len)
     result = SDIO_HM_TX_CMD(sdio_cmd->sdio_hm, rsp, rsp_len);
     if (result != CY_RSLT_SUCCESS) {
         PRINT_HM_ERROR(("Send event failed 0x%lx\n", result));
-        free(rsp);
+        whd_mem_free(rsp);
     }
 }
 
@@ -348,14 +348,14 @@ sdio_cmd_wl_ioctl(sdio_command_t sdio_cmd, int cmd, void *buf, int len, bool set
         {
             if ( ( len > 0 ) && ( buf ) )
             {
-                memcpy( &value, buf, len );
+                whd_mem_memcpy( &value, buf, len );
             }
             result = whd_wifi_set_ioctl_value(ifp, cmd, value);
         }
         else if ( ( len <= 4) )
         {
             result = whd_wifi_get_ioctl_value(ifp, cmd, &value);
-            memcpy(buf, &value, len );
+            whd_mem_memcpy(buf, &value, len );
         }
         else if ( ( len > 4) && ( set )  )
         {
@@ -373,13 +373,13 @@ sdio_cmd_wl_ioctl(sdio_command_t sdio_cmd, int cmd, void *buf, int len, bool set
 
         if ( ( datalen <= 4 ) && ( cmd == WLC_SET_VAR ) )
         {
-            memcpy(&value, (char *)(((char *)buf) + strlen(token) + 1)  , sizeof(value));
+            whd_mem_memcpy(&value, (char *)(((char *)buf) + strlen(token) + 1)  , sizeof(value));
             result = whd_wifi_set_iovar_value(ifp, (const char *)buf, value);
         }
         else if  (( datalen <= 4 ) && ( cmd == WLC_GET_VAR ) )
         {
             result = whd_wifi_get_iovar_value(ifp, (const char *)buf, &value);
-            memcpy(buf, &value, len );
+            whd_mem_memcpy(buf, &value, len );
         }
         else if ( ( datalen > 4) && ( set )  )
         {
@@ -690,7 +690,7 @@ cy_rslt_t sdio_cmd_at_write_data(uint8_t *buffer, uint32_t length)
 
     inf_event = (inf_at_event_t *)whd_mem_malloc(sizeof(*inf_event));
     if (!inf_event) {
-        PRINT_HM_ERROR(("inf_at_event_t malloc failed\n"));
+        PRINT_HM_ERROR(("inf_at_event_t whd_mem_malloc failed\n"));
         return CYHAL_SDIO_RSLT_ERR_CONFIG;
     }
 
@@ -706,7 +706,7 @@ cy_rslt_t sdio_cmd_at_write_data(uint8_t *buffer, uint32_t length)
     if (result != SDIOD_STATUS_SUCCESS) {
         sdio_hm->tx_info->err_event++;
         PRINT_HM_ERROR(("tx event failed: 0x%lx\n", result));
-        free(inf_event);
+        whd_mem_free(inf_event);
     }
 
     return result;
@@ -893,7 +893,7 @@ static void sdio_cmd_thread_func(cy_thread_arg_t arg)
         }
 
         sdio_cmd_handler(sdio_cmd, msg_queue_entry.cmd_msg);
-        free(msg_queue_entry.cmd_msg);
+        whd_mem_free(msg_queue_entry.cmd_msg);
     } while (true);
 
     /* Should never get here */
@@ -906,7 +906,7 @@ cy_rslt_t sdio_cmd_init(void *sdio_handler)
 
     sdio_cmd = (sdio_command_t)whd_mem_malloc(sizeof(*sdio_cmd));
     if (!sdio_cmd) {
-        PRINT_HM_ERROR(("sdio_cmd malloc failed\n"));
+        PRINT_HM_ERROR(("sdio_cmd whd_mem_malloc failed\n"));
         return CYHAL_SDIO_RSLT_ERR_CONFIG;
     }
     whd_mem_memset(sdio_cmd, 0, sizeof(*sdio_cmd));
@@ -940,7 +940,7 @@ cy_rslt_t sdio_cmd_data_enq(sdio_command_t sdio_cmd, uint8_t *data, uint16_t dat
 
     msg = (uint8_t *)whd_mem_malloc(data_len);
     if (!msg) {
-        PRINT_HM_ERROR(("msg malloc failed\n"));
+        PRINT_HM_ERROR(("msg whd_mem_malloc failed\n"));
         return CYHAL_SDIO_RSLT_ERR_CONFIG;
     }
     whd_mem_memset(msg, 0, sizeof(*msg));

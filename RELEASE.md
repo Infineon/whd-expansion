@@ -1,4 +1,4 @@
-# Wi-Fi Host Driver Expansion (WHDE) 1.0.10 
+# Wi-Fi Host Driver Expansion (WHDE) 1.1.0 
 Please refer to the [README File](./README.md) and the [WHD API Reference Manual](https://infineon.github.io/wifi-host-driver/html/index.html) for a complete description of the Wi-Fi Host Driver.
 
 ### WIFI6 Supported Chip v4.3.0

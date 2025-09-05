@@ -294,7 +294,7 @@ uint32_t spi_hm_atcmd_write_data(uint8_t *buffer, uint32_t length)
         PRINT_HM_ERROR(("spi_cmd_at_write_data: TX payload alloc failed \n"));
         return WHD_MALLOC_FAILURE;
     }
-    memcpy(spi_hm_write->tx_payload, buffer, spi_hdr_tx.length);
+    whd_mem_memcpy(spi_hm_write->tx_payload, buffer, spi_hdr_tx.length);
 
     PRINT_HM_DEBUG(("spi_cmd_at_write_data ----> \n"));
 
@@ -335,7 +335,7 @@ uint32_t spi_hm_atcmd_read_data(uint8_t *buffer, uint32_t length)
     at_cmd_len = strlen((const char*)spi_hm_write->at_cmd_buf);
     if (at_cmd_len > 0)
     {
-        memcpy(buffer, spi_hm_write->at_cmd_buf, at_cmd_len);
+        whd_mem_memcpy(buffer, spi_hm_write->at_cmd_buf, at_cmd_len);
     }
 
     spi_hm_write->is_at_read = WHD_FALSE;

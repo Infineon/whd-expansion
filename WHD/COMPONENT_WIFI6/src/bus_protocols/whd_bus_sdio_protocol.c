@@ -1114,7 +1114,7 @@ whd_result_t whd_bus_sdio_cmd53(whd_driver_t whd_driver, whd_bus_transfer_direct
         if (direction == BUS_WRITE)
         {
             /* Copy the data to aligned buffer */
-            memcpy((void *)aligned_local_buffer, (void *)data, data_size);
+            whd_mem_memcpy((void *)aligned_local_buffer, (void *)data, data_size);
         }
 
         iscacheable = true;
@@ -1171,7 +1171,7 @@ whd_result_t whd_bus_sdio_cmd53(whd_driver_t whd_driver, whd_bus_transfer_direct
 #if !defined (CY_DISABLE_XMC7000_DATA_CACHE) && defined (__DCACHE_PRESENT) && (__DCACHE_PRESENT == 1U)
     if(iscacheable == true && response_expected == RESPONSE_NEEDED)
     {
-        memcpy((void *)data, (void *)aligned_local_buffer, data_size);
+        whd_mem_memcpy((void *)data, (void *)aligned_local_buffer, data_size);
     }
 #endif
 

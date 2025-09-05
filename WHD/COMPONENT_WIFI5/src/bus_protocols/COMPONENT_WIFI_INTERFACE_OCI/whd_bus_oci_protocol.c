@@ -139,8 +139,8 @@ whd_result_t whd_bus_oci_attach(whd_driver_t whd_driver, whd_oci_config_t *whd_o
     whd_driver->bus_if   = &whd_bus_oci_info;
     whd_driver->bus_priv = &whd_bus_priv;
 
-    memset(whd_driver->bus_if, 0, sizeof(whd_bus_info_t) );
-    memset(whd_driver->bus_priv, 0, sizeof(struct whd_bus_priv) );
+    whd_mem_memset(whd_driver->bus_if, 0, sizeof(whd_bus_info_t) );
+    whd_mem_memset(whd_driver->bus_priv, 0, sizeof(struct whd_bus_priv) );
 
     whd_driver->bus_priv->oci_config = *whd_oci_config;
 
@@ -398,11 +398,11 @@ static whd_result_t whd_bus_oci_transfer_bytes(whd_driver_t whd_driver, whd_bus_
 
     if (direction == BUS_WRITE)
     {
-        memcpy((void *)address, (const void *)data, size);
+        whd_mem_memcpy((void *)address, (const void *)data, size);
     }
     else
     {
-        memcpy((void *)data, (const void *)address, size);
+        whd_mem_memcpy((void *)data, (const void *)address, size);
     }
 
     return WHD_SUCCESS;
@@ -650,7 +650,7 @@ static whd_result_t whd_bus_oci_download_resource(whd_driver_t whd_driver, whd_r
             }
         }
 
-        memcpy( (void *)TRANS_ADDR(address), (void*)image, size_out );
+        whd_mem_memcpy( (void *)TRANS_ADDR(address), (void*)image, size_out );
 
         address += size_out;
     }

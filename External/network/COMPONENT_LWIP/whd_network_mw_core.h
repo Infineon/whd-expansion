@@ -46,7 +46,7 @@
 #ifdef WHD_NETWORK_LWIP
 #include <stddef.h>
 #include "cy_result.h"
-#include "cy_nw_helper.h"
+#include "whd_nw_helper.h"
 #include "whd.h"
 
 #ifdef __cplusplus
@@ -411,7 +411,7 @@ cy_rslt_t whd_network_get_gateway_mac_address(whd_network_interface_context *ifa
  */
 cy_rslt_t whd_network_get_netmask_address(whd_network_interface_context *iface_context, whd_nw_ip_address_t *net_mask_addr);
 
-/**
+/** 
  * Sends a ping request to the given IP address
  *
  * @param[in]  if_ctx           : Pointer to the network interface context (typecast to void *)
@@ -423,34 +423,34 @@ cy_rslt_t whd_network_get_netmask_address(whd_network_interface_context *iface_c
  * */
 cy_rslt_t whd_network_ping(void *if_ctx, whd_nw_ip_address_t *address, uint32_t timeout_ms, uint32_t* elapsed_time_ms);
 
-/**
+/** 
  * Gets an IP address assigned from the connected AP's DHCP server
- *
+ * 
  * @param[in] interface         : WHD interface
  * @param[out] nw_sta_ifx_ctx   : Pointer to the pointer to the network interface context than can be reused by the user
- *
+ * 
  * @return CY_RSLT_SUCCESS if successful ; CY_RSLT_NETWORK_DHCP_TIMEOUT if failed
  */
 cy_rslt_t whd_network_ip_assign(whd_interface_t interface, whd_network_interface_context **nw_sta_ifx_ctx);
 
-/**
+/** 
  * Initializes the network interface for WiFi Host Driver to interact with LWIP
- *
+ * 
  * @param[in] interface         : WHD interface
  * @param[in] iface_type        : Network interface type \ref whd_network_hw_interface_type_t
- * @param[in] static_ip_ptr     : Pointer to the static IP address provided by the user
+ * @param[in] static_ip_ptr     : Pointer to the static IP address provided by the user 
  * @param[out] nw_sta_ifx_ctx   : Pointer to the pointer to the network interface context than can be reused by the user
- *
+ * 
  * @return CY_RSLT_SUCCESS if successful; error code from internal function calls, if failed
  */
 cy_rslt_t whd_network_up(whd_interface_t interface, whd_network_hw_interface_type_t iface_type, whd_network_static_ip_addr_t *static_ip_ptr, whd_network_interface_context **nw_sta_ifx_ctx);
 
-/**
+/** 
  * De-initializes the network interface between LWIP and WiFi Host Driver
- *
+ * 
  * @param[in] interface         : WHD interface
  * @param[in] iface_type        : Network interface type \ref whd_network_hw_interface_type_t
- *
+ * 
  */
 void whd_network_down(whd_interface_t interface, whd_network_hw_interface_type_t iface_type);
 
@@ -462,3 +462,4 @@ void whd_network_down(whd_interface_t interface, whd_network_hw_interface_type_t
 #endif
 /** \} group_lwip_network_interface_integration */
 #endif
+

@@ -23,8 +23,10 @@
 CY_SECTION_WHD(CY_STORAGE_WIFI_DATA) __attribute__((used))
 #endif
 
-const resource_hnd_t wifi_firmware_image;
+extern const resource_hnd_t wifi_firmware_image;
 extern const unsigned char wifi_firmware_image_data[];
+
+#ifndef RESOURCE_READ_FROM_C_FILE
 extern uint32_t wifi_firmware_image_size;
 #ifndef __IAR_SYSTEMS_ICC__
 #ifdef CY_STORAGE_WIFI_DATA
@@ -34,5 +36,6 @@ RESOURCE_BIN_ADD(".rodata", FW_IMAGE_NAME, wifi_firmware_image_data, wifi_firmwa
 #endif
 #endif
 const resource_hnd_t wifi_firmware_image = { RESOURCE_IN_MEMORY, FW_IMAGE_SIZE, {.mem = { (const char *) wifi_firmware_image_data }}};
+#endif /* ifndef RESOURCE_READ_FROM_C_FILE */
 
 #endif /* ifndef INCLUDED_RESOURCES_H_ */

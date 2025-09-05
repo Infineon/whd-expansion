@@ -31,7 +31,9 @@ extern "C" {
 /******************************************************
 *                      Macros
 ******************************************************/
+#ifndef BIT_MASK
 #define BIT_MASK(x)         ( (1 << x) - 1 )
+#endif
 
 #define WHD_BUS_HEADER_SIZE                     (0)
 

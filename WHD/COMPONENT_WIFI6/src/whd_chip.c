@@ -17,7 +17,7 @@
 
 #include "bus_protocols/whd_chip_reg.h"
 #include "bus_protocols/whd_sdio.h"
-#include "bus_protocols/whd_bus_common.h"
+#include "whd_bus_common.h"
 #include "bus_protocols/whd_bus_protocol_interface.h"
 #include "whd_chip_constants.h"
 #ifndef PROTO_MSGBUF
@@ -1284,7 +1284,11 @@ static whd_result_t whd_enable_save_restore(whd_driver_t whd_driver)
         CHECK_RETURN(whd_bus_sleep(whd_driver) );
 
         /* Put SPI interface block to sleep */
+#ifdef WHD_DISABLE_SDIO_PULLUP_DURING_SPI_SLEEP
+        CHECK_RETURN(whd_bus_write_register_value(whd_driver, BACKPLANE_FUNCTION, SDIO_PULL_UP, (uint8_t)1, 0x0) );
+#else
         CHECK_RETURN(whd_bus_write_register_value(whd_driver, BACKPLANE_FUNCTION, SDIO_PULL_UP, (uint8_t)1, 0xf) );
+#endif /* WHD_DISABLE_SDIO_PULLUP_DURING_SPI_SLEEP */
 
         whd_driver->chip_info.save_restore_enable = WHD_TRUE;
     }

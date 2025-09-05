@@ -208,8 +208,8 @@ static void *whd_msgbuf_get_iovar_buffer(whd_driver_t whd_driver,
     {
         uint8_t *data = whd_buffer_get_current_piece_data_pointer(whd_driver, *buffer);
         CHECK_PACKET_NULL(data, NULL);
-        memset(data, 0, (name_length + data_length));
-        memcpy(data, name, name_length);
+        whd_mem_memset(data, 0, (name_length + data_length));
+        whd_mem_memcpy(data, name, name_length);
         return (data + name_length);
     }
     else
@@ -264,7 +264,7 @@ int whd_msgbuf_send_mbdata(struct whd_driver *drvr, uint32_t mbdata)
     }
 
     h2d_mbdata = (struct msgbuf_h2d_mbdata *)ret_ptr;
-    memset(h2d_mbdata, 0, sizeof(*h2d_mbdata) );
+    whd_mem_memset(h2d_mbdata, 0, sizeof(*h2d_mbdata) );
 
     h2d_mbdata->msg.msgtype = MSGBUF_TYPE_H2D_MAILBOX_DATA;
     h2d_mbdata->mbdata = htod32(mbdata);
@@ -320,13 +320,13 @@ int whd_msgbuf_ioctl_dequeue(struct whd_driver *whd_driver)
     if (msgbuf->ioctl_queue)
     {
         ioctl_queue_buf = whd_buffer_get_current_piece_data_pointer(whd_driver, (whd_buffer_t)msgbuf->ioctl_queue);
-        memcpy(msgbuf->ioctbuf, ioctl_queue_buf, buf_len);
+        whd_mem_memcpy(msgbuf->ioctbuf, ioctl_queue_buf, buf_len);
         CHECK_RETURN(whd_buffer_release(whd_driver, msgbuf->ioctl_queue, WHD_NETWORK_TX) );
         msgbuf->ioctl_queue = NULL;
     }
     else
     {
-        memset(msgbuf->ioctbuf, 0, buf_len);
+        whd_mem_memset(msgbuf->ioctbuf, 0, buf_len);
     }
 
     retval = whd_commonring_write_complete(commonring);
@@ -725,11 +725,11 @@ static void whd_msgbuf_process_event_buffer(whd_driver_t whd_driver, whd_buffer_
     }
 
     datalen = whd_event->datalen;
-    /* use memcpy to get aligned event message */
+    /* use whd_mem_memcpy to get aligned event message */
     addr = (uint32_t )DATA_AFTER_HEADER(event);
     if (aligned_event && (addr & ALIGNED_ADDRESS) )
     {
-        memcpy(aligned_event, (whd_event_t *)addr, datalen);
+        whd_mem_memcpy(aligned_event, (whd_event_t *)addr, datalen);
     }
     else
     {
@@ -1191,7 +1191,7 @@ whd_result_t whd_msgbuf_txflow(struct whd_driver *drvr, uint16_t flowid)
         tx_msghdr->flags = WHD_MSGBUF_PKT_FLAGS_FRAME_802_3;
         tx_msghdr->flags |= ((msgbuf->priority) & 0x07) << WHD_MSGBUF_PKT_FLAGS_PRIO_SHIFT;
         tx_msghdr->seg_cnt = 1;
-        memcpy(tx_msghdr->txhdr, whd_buffer_get_current_piece_data_pointer(drvr, skb), WHD_ETHERNET_SIZE);
+        whd_mem_memcpy(tx_msghdr->txhdr, whd_buffer_get_current_piece_data_pointer(drvr, skb), WHD_ETHERNET_SIZE);
         tx_msghdr->data_len = (whd_buffer_get_current_piece_size(drvr, skb) - htod16(WHD_ETHERNET_SIZE) );
         address = (uint32_t)physaddr;
         tx_msghdr->data_buf_addr.high_addr = 0x0;
@@ -1414,8 +1414,8 @@ whd_msgbuf_flowring_create_worker(struct whd_msgbuf *msgbuf, struct whd_msgbuf_w
     create->msg.request_ptr = 0;
     create->tid = whd_flowring_tid(msgbuf->flow, flowid);
     create->flow_ring_id = htod16(flowid + WHD_H2D_MSGRING_FLOWRING_IDSTART);
-    memcpy(create->sa, work->sa, ETHER_ADDR_LEN);
-    memcpy(create->da, work->da, ETHER_ADDR_LEN);
+    whd_mem_memcpy(create->sa, work->sa, ETHER_ADDR_LEN);
+    whd_mem_memcpy(create->da, work->da, ETHER_ADDR_LEN);
     address = (uint32_t)msgbuf->flowring_handle[flowid];
     create->flow_ring_addr.high_addr = 0x0;
     create->flow_ring_addr.low_addr = htod32(address & 0xffffffff);
@@ -1448,7 +1448,7 @@ static uint32_t whd_msgbuf_flowring_create(struct whd_msgbuf *msgbuf, int ifidx,
     if (create == NULL)
         return WHD_FLOWRING_INVALID_ID;
 
-    memset(create, 0, sizeof(*create) );
+    whd_mem_memset(create, 0, sizeof(*create) );
 
     flowid = whd_flowring_create(msgbuf->flow, eh->destination_address, prio, ifidx);
 
@@ -1460,8 +1460,8 @@ static uint32_t whd_msgbuf_flowring_create(struct whd_msgbuf *msgbuf, int ifidx,
 
     create->flowid = flowid;
     create->ifidx = ifidx;
-    memcpy(create->sa, eh->source_address, ETHER_ADDR_LEN);
-    memcpy(create->da, eh->destination_address, ETHER_ADDR_LEN);
+    whd_mem_memcpy(create->sa, eh->source_address, ETHER_ADDR_LEN);
+    whd_mem_memcpy(create->da, eh->destination_address, ETHER_ADDR_LEN);
 
     if (whd_msgbuf_flowring_create_worker(msgbuf, create) == WHD_FLOWRING_INVALID_ID)
     {
@@ -1562,7 +1562,7 @@ static whd_result_t whd_msgbuf_rxbuf_data_post(struct whd_msgbuf *msgbuf, uint32
     for (i = 0; i < alloced; i++)
     {
         rx_bufpost = (struct msgbuf_rx_bufpost *)ret_ptr;
-        memset(rx_bufpost, 0, sizeof(*rx_bufpost) );
+        whd_mem_memset(rx_bufpost, 0, sizeof(*rx_bufpost) );
 
         result = whd_host_buffer_get(drvr, &rx_databuf, WHD_NETWORK_RX,
                                      (uint16_t)(WHD_MSGBUF_DATA_MAX_RX_SIZE + sizeof(whd_buffer_header_t)), WHD_RX_BUF_TIMEOUT);
@@ -1678,7 +1678,7 @@ whd_msgbuf_rxbuf_ctrl_post(struct whd_msgbuf *msgbuf, uint8_t event_buf,
     for (i = 0; i < allocated; i++)
     {
         rx_bufpost = (struct msgbuf_rx_ioctl_resp_or_event *)ret_ptr;
-        memset(rx_bufpost, 0, sizeof(*rx_bufpost) );
+        whd_mem_memset(rx_bufpost, 0, sizeof(*rx_bufpost) );
 
         result = whd_host_buffer_get(drvr, &rx_ctlbuf, WHD_NETWORK_RX,
                                      (uint16_t)WHD_MSGBUF_IOCTL_MAX_RX_SIZE, WHD_RX_BUF_TIMEOUT);
@@ -1758,7 +1758,7 @@ whd_msgbuf_init_pktids(uint32_t nr_array_entries)
         WPRINT_WHD_DEBUG( ("array allocation failed \n") );
         return NULL;
     }
-    memset(array, 0, sizeof(struct whd_msgbuf_pktid) );
+    whd_mem_memset(array, 0, sizeof(struct whd_msgbuf_pktid) );
 
     for(i = 0; i < nr_array_entries; i++)
     {
@@ -1772,7 +1772,7 @@ whd_msgbuf_init_pktids(uint32_t nr_array_entries)
         whd_mem_free(array);
         return NULL;
     }
-    memset(pktids, 0, sizeof(struct whd_msgbuf_pktids) );
+    whd_mem_memset(pktids, 0, sizeof(struct whd_msgbuf_pktids) );
 
     pktids->array = array;
     pktids->array_size = nr_array_entries;
@@ -1817,7 +1817,7 @@ static whd_result_t whd_msgbuf_attach(struct whd_driver *whd_driver)
         WPRINT_WHD_DEBUG( ("msgbuf allocation failed \n") );
         return WHD_MALLOC_FAILURE;
     }
-    memset(msgbuf, 0, sizeof(struct whd_msgbuf) );
+    whd_mem_memset(msgbuf, 0, sizeof(struct whd_msgbuf) );
 
     count = CEIL(whd_driver->ram_shared->max_flowrings, NBBY);
     count = count * sizeof(uint8_t);
@@ -1827,7 +1827,7 @@ static whd_result_t whd_msgbuf_attach(struct whd_driver *whd_driver)
         WPRINT_WHD_ERROR( ("flow_map allocation failed \n") );
         goto fail;
     }
-    memset(msgbuf->flow_map, 0, count);
+    whd_mem_memset(msgbuf->flow_map, 0, count);
 
     msgbuf->drvr = whd_driver;
 
@@ -1863,7 +1863,7 @@ static whd_result_t whd_msgbuf_attach(struct whd_driver *whd_driver)
         WPRINT_WHD_ERROR( ("Flowring_handle allocation failed \n") );
         goto fail;
     }
-    memset(msgbuf->flowring_handle, 0, sizeof(*msgbuf->flowring_handle) * whd_driver->ram_shared->max_flowrings);
+    whd_mem_memset(msgbuf->flowring_handle, 0, sizeof(*msgbuf->flowring_handle) * whd_driver->ram_shared->max_flowrings);
 
     flowrings = whd_mem_malloc(sizeof(*flowrings) * whd_driver->ram_shared->max_flowrings);
     if (flowrings == NULL)
@@ -2028,7 +2028,7 @@ whd_result_t whd_msgbuf_info_init(whd_driver_t whd_driver)
     }
 
     /* Initialise the list of event handler functions */
-    memset(msgbuf_info->whd_event_list, 0, sizeof(msgbuf_info->whd_event_list) );
+    whd_mem_memset(msgbuf_info->whd_event_list, 0, sizeof(msgbuf_info->whd_event_list) );
 
     /* Create semaphore to protect event list management */
     if (cy_rtos_init_semaphore(&error_info->event_list_mutex, 1, 0) != WHD_SUCCESS)
@@ -2043,7 +2043,7 @@ whd_result_t whd_msgbuf_info_init(whd_driver_t whd_driver)
     }
 
     /* Initialise the list of error handler functions */
-    memset(error_info->whd_event_list, 0, sizeof(error_info->whd_event_list) );
+    whd_mem_memset(error_info->whd_event_list, 0, sizeof(error_info->whd_event_list) );
 
     whd_driver->proto->get_ioctl_buffer = whd_msgbuf_get_ioctl_buffer;
     whd_driver->proto->get_iovar_buffer = whd_msgbuf_get_iovar_buffer;

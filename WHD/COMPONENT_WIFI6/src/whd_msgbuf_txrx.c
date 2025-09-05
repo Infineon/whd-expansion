@@ -706,7 +706,7 @@ whd_msgbuf_process_ioctl_complete(whd_driver_t whd_driver, struct whd_msgbuf *ms
         else
         {
             /* If we got the response for different IOCTL sent earlier,
-               free the buffer to avoid buffer pool memory leak */
+               whd_mem_free the buffer to avoid buffer pool memory leak */
             msgbuf_info->ioctl_response =
                     whd_msgbuf_get_pktid(whd_driver, msgbuf->rx_pktids, msgbuf_info->ioctl_response_pktid);
 

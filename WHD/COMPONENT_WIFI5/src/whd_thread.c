@@ -61,7 +61,7 @@ static void whd_thread_func(cy_thread_arg_t thread_input);
 ******************************************************/
 void whd_thread_info_init(whd_driver_t whd_driver, whd_init_config_t *whd_init_config)
 {
-    memset(&whd_driver->thread_info, 0, sizeof(whd_driver->thread_info) );
+    whd_mem_memset(&whd_driver->thread_info, 0, sizeof(whd_driver->thread_info) );
     whd_driver->thread_info.thread_stack_start = whd_init_config->thread_stack_start;
     whd_driver->thread_info.thread_stack_size = whd_init_config->thread_stack_size;
     whd_driver->thread_info.thread_priority = (cy_thread_priority_t)whd_init_config->thread_priority;

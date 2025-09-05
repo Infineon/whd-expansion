@@ -407,7 +407,7 @@ whd_result_t whd_wifi_init_ap(whd_interface_t ifp, whd_ssid_t *ssid, whd_securit
         data[0] = htod32(bss_index); /* Set the bsscfg index */
     }
     data[1] = htod32(ssid->length); /* Set the ssid length */
-    memcpy(&data[2], (uint8_t *)ssid->value, ssid->length);
+    whd_mem_memcpy(&data[2], (uint8_t *)ssid->value, ssid->length);
     if ( (wlan_chip_id == 43340) || (wlan_chip_id == 43342) )
     {
         CHECK_RETURN_WITH_SEMAPHORE(whd_proto_set_iovar(ifp, buffer, 0), &ap->whd_wifi_sleep_flag);
@@ -468,7 +468,7 @@ whd_result_t whd_wifi_init_ap(whd_interface_t ifp, whd_ssid_t *ssid, whd_securit
             /* Set the passphrase */
             psk = (wsec_pmk_t *)whd_proto_get_ioctl_buffer(whd_driver, &buffer, sizeof(wsec_pmk_t) );
             CHECK_IOCTL_BUFFER_WITH_SEMAPHORE(psk, &ap->whd_wifi_sleep_flag);
-            memcpy(psk->key, security_key, key_length);
+            whd_mem_memcpy(psk->key, security_key, key_length);
             psk->key_len = htod16(key_length);
             psk->flags = htod16( (uint16_t)WSEC_PASSPHRASE );
             CHECK_RETURN(cy_rtos_delay_milliseconds(1) );
@@ -535,7 +535,7 @@ whd_result_t whd_wifi_init_ap(whd_interface_t ifp, whd_ssid_t *ssid, whd_securit
                 /* Set the passphrase */
                 psk = (wsec_pmk_t *)whd_proto_get_ioctl_buffer(whd_driver, &buffer, sizeof(wsec_pmk_t) );
                 CHECK_IOCTL_BUFFER_WITH_SEMAPHORE(psk, &ap->whd_wifi_sleep_flag);
-                memcpy(psk->key, security_key, key_length);
+                whd_mem_memcpy(psk->key, security_key, key_length);
                 psk->key_len = htod16(key_length);
                 psk->flags = htod16( (uint16_t)WSEC_PASSPHRASE );
                 CHECK_RETURN(cy_rtos_delay_milliseconds(1) );

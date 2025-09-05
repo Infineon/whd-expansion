@@ -166,7 +166,7 @@ whd_result_t whd_bus_sdio_attach(whd_driver_t whd_driver, whd_sdio_config_t *whd
         WPRINT_WHD_ERROR( ("Memory allocation failed for whd_bus_info in %s\n", __FUNCTION__) );
         return WHD_BUFFER_UNAVAILABLE_PERMANENT;
     }
-    memset(whd_bus_info, 0, sizeof(whd_bus_info_t) );
+    whd_mem_memset(whd_bus_info, 0, sizeof(whd_bus_info_t) );
 
     whd_driver->bus_if = whd_bus_info;
 
@@ -177,7 +177,7 @@ whd_result_t whd_bus_sdio_attach(whd_driver_t whd_driver, whd_sdio_config_t *whd
         WPRINT_WHD_ERROR( ("Memory allocation failed for whd_bus_priv in %s\n", __FUNCTION__) );
         return WHD_BUFFER_UNAVAILABLE_PERMANENT;
     }
-    memset(whd_driver->bus_priv, 0, sizeof(struct whd_bus_priv) );
+    whd_mem_memset(whd_driver->bus_priv, 0, sizeof(struct whd_bus_priv) );
 
     whd_driver->bus_priv->sdio_obj = sdio_obj;
     whd_driver->bus_priv->sdio_config = *whd_sdio_config;
@@ -322,7 +322,7 @@ whd_result_t whd_bus_sdio_init(whd_driver_t whd_driver)
     uint32_t wifi_firmware_image_size = 0;
     uint16_t chip_id;
     uint8_t *aligned_addr = NULL;
-    memset(&whd_driver->chip_info, 0, sizeof(whd_driver->chip_info) );
+    whd_mem_memset(&whd_driver->chip_info, 0, sizeof(whd_driver->chip_info) );
 
     whd_bus_set_flow_control(whd_driver, WHD_FALSE);
 
@@ -802,7 +802,7 @@ whd_result_t whd_bus_sdio_read_frame(whd_driver_t whd_driver, whd_buffer_t *buff
     CHECK_RETURN(whd_ensure_wlan_bus_is_up(whd_driver) );
 
     /* Read the frame header and verify validity */
-    memset(hwtag, 0, sizeof(hwtag) );
+    whd_mem_memset(hwtag, 0, sizeof(hwtag) );
 
     result = whd_bus_sdio_transfer(whd_driver, BUS_READ, WLAN_FUNCTION, 0, (uint16_t)INITIAL_READ, (uint8_t *)hwtag,
                                    RESPONSE_NEEDED);
@@ -874,7 +874,7 @@ whd_result_t whd_bus_sdio_read_frame(whd_driver_t whd_driver, whd_buffer_t *buff
     data = whd_buffer_get_current_piece_data_pointer(whd_driver, *buffer);
     CHECK_PACKET_NULL(data, WHD_NO_REGISTER_FUNCTION_POINTER);
     /* Copy the data already read */
-    memcpy(data + sizeof(whd_buffer_header_t), hwtag, (size_t)INITIAL_READ);
+    whd_mem_memcpy(data + sizeof(whd_buffer_header_t), hwtag, (size_t)INITIAL_READ);
 
     /* Read the rest of the data */
     if (extra_space_required > 0)
@@ -1079,7 +1079,7 @@ static whd_result_t whd_bus_sdio_cmd53(whd_driver_t whd_driver, whd_bus_transfer
         if (direction == BUS_WRITE)
         {
             /* Copy the data to aligned buffer */
-            memcpy((void *)aligned_local_buffer, (void *)data, data_size);
+            whd_mem_memcpy((void *)aligned_local_buffer, (void *)data, data_size);
         }
 
         iscacheable = true;
@@ -1130,7 +1130,7 @@ static whd_result_t whd_bus_sdio_cmd53(whd_driver_t whd_driver, whd_bus_transfer
 #if !defined (CY_DISABLE_XMC7000_DATA_CACHE) && defined (__DCACHE_PRESENT) && (__DCACHE_PRESENT == 1U)
     if(iscacheable == true && response_expected == RESPONSE_NEEDED)
     {
-        memcpy((void *)data, (void *)aligned_local_buffer, data_size);
+        whd_mem_memcpy((void *)data, (void *)aligned_local_buffer, data_size);
     }
 #endif
 
@@ -1319,7 +1319,7 @@ static whd_result_t whd_bus_sdio_abort_read(whd_driver_t whd_driver, whd_bool_t 
 whd_result_t whd_bus_sdio_read_register_value(whd_driver_t whd_driver, whd_bus_function_t function, uint32_t address,
                                               uint8_t value_length, uint8_t *value)
 {
-    memset(value, 0, (size_t)value_length);
+    whd_mem_memset(value, 0, (size_t)value_length);
     return whd_bus_sdio_transfer(whd_driver, BUS_READ, function, address, value_length, value, RESPONSE_NEEDED);
 }
 
@@ -1362,7 +1362,7 @@ static whd_result_t whd_bus_sdio_set_oob_interrupt(whd_driver_t whd_driver, uint
 
 void whd_bus_sdio_init_stats(whd_driver_t whd_driver)
 {
-    memset(&whd_driver->bus_priv->whd_bus_stats, 0, sizeof(whd_bus_stats_t) );
+    whd_mem_memset(&whd_driver->bus_priv->whd_bus_stats, 0, sizeof(whd_bus_stats_t) );
 }
 
 whd_result_t whd_bus_sdio_print_stats(whd_driver_t whd_driver, whd_bool_t reset_after_print)
@@ -1384,7 +1384,7 @@ whd_result_t whd_bus_sdio_print_stats(whd_driver_t whd_driver, whd_bool_t reset_
 
     if (reset_after_print == WHD_TRUE)
     {
-        memset(&whd_driver->bus_priv->whd_bus_stats, 0, sizeof(whd_bus_stats_t) );
+        whd_mem_memset(&whd_driver->bus_priv->whd_bus_stats, 0, sizeof(whd_bus_stats_t) );
     }
 
 #ifdef CYCFG_ULP_SUPPORT_ENABLED

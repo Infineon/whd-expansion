@@ -90,6 +90,7 @@ extern "C" {
 
 #define resource_get_size(resource) ( (resource)->size )
 
+#ifndef RESOURCE_READ_FROM_C_FILE
 /* Add Binary file */
 #define RESOURCE_BIN_ADD(sect, file, sym, size) \
 __asm__(\
@@ -102,6 +103,7 @@ __asm__(\
     "    .set " #size ", . - " #sym " \n" \
     "    .popsection                  \n" \
     )
+#endif /* ifndef RESOURCE_READ_FROM_C_FILE */
 
 /******************************************************
 *                    Constants

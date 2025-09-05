@@ -37,7 +37,7 @@ cy_rslt_t sdio_hm_usr_evt_to_host(const void *evt, uint16_t evt_len)
 
     inf_event = whd_mem_malloc(sizeof(*inf_event));
     if (!inf_event) {
-        PRINT_HM_ERROR(("inf_event malloc failed\n"));
+        PRINT_HM_ERROR(("inf_event whd_mem_malloc failed\n"));
         return CYHAL_SDIO_RSLT_ERR_COMMAND_SEND;
     }
 
@@ -53,7 +53,7 @@ cy_rslt_t sdio_hm_usr_evt_to_host(const void *evt, uint16_t evt_len)
     if (result != SDIOD_STATUS_SUCCESS) {
         sdio_hm->tx_info->err_event++;
         PRINT_HM_ERROR(("tx event failed: 0x%lx\n", result));
-        free(inf_event);
+        whd_mem_free(inf_event);
     }
 
     return result;

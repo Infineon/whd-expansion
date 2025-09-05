@@ -17,7 +17,7 @@
 
 #include "bus_protocols/whd_chip_reg.h"
 #include "bus_protocols/whd_sdio.h"
-#include "bus_protocols/whd_bus_common.h"
+#include "whd_bus_common.h"
 #include "bus_protocols/whd_bus_protocol_interface.h"
 #include "whd_chip_constants.h"
 #ifndef PROTO_MSGBUF
@@ -684,9 +684,9 @@ whd_result_t whd_ioctl_log_add(whd_driver_t whd_driver, uint32_t cmd, whd_buffer
     whd_driver->whd_ioctl_log[whd_driver->whd_ioctl_log_index % WHD_IOCTL_LOG_SIZE].is_this_event = 0;
     whd_driver->whd_ioctl_log[whd_driver->whd_ioctl_log_index % WHD_IOCTL_LOG_SIZE].data_size = MIN_OF(
         WHD_MAX_DATA_SIZE, data_size);
-    memset(whd_driver->whd_ioctl_log[whd_driver->whd_ioctl_log_index % WHD_IOCTL_LOG_SIZE].data, 0,
+    whd_mem_memset(whd_driver->whd_ioctl_log[whd_driver->whd_ioctl_log_index % WHD_IOCTL_LOG_SIZE].data, 0,
            WHD_MAX_DATA_SIZE);
-    memcpy(whd_driver->whd_ioctl_log[whd_driver->whd_ioctl_log_index % WHD_IOCTL_LOG_SIZE].data, data,
+    whd_mem_memcpy(whd_driver->whd_ioctl_log[whd_driver->whd_ioctl_log_index % WHD_IOCTL_LOG_SIZE].data, data,
            whd_driver->whd_ioctl_log[whd_driver->whd_ioctl_log_index % WHD_IOCTL_LOG_SIZE].data_size);
 
     whd_driver->whd_ioctl_log_index++;
@@ -763,7 +763,7 @@ whd_result_t whd_ioctl_print(whd_driver_t whd_driver)
         }
     }
 
-    memset(whd_driver->whd_ioctl_log, 0, sizeof(whd_driver->whd_ioctl_log) );
+    whd_mem_memset(whd_driver->whd_ioctl_log, 0, sizeof(whd_driver->whd_ioctl_log) );
     whd_driver->whd_ioctl_log_index = 0;
     CHECK_RETURN(cy_rtos_set_semaphore(&whd_driver->whd_log_mutex, WHD_FALSE) );
     return WHD_SUCCESS;
@@ -792,7 +792,7 @@ whd_result_t whd_wifi_set_custom_country_code(whd_interface_t ifp, const whd_cou
             whd_assert("Could not get buffer for IOCTL", 0 != 0);
             return WHD_BUFFER_ALLOC_FAIL;
         }
-        memcpy(data, country_code, sizeof(whd_country_info_t) );
+        whd_mem_memcpy(data, country_code, sizeof(whd_country_info_t) );
         result = whd_proto_set_ioctl(ifp, WLC_SET_CUSTOM_COUNTRY, buffer, NULL);
         return result;
     }
@@ -1036,7 +1036,7 @@ whd_result_t whd_ensure_wlan_bus_is_up(whd_driver_t whd_driver)
 #ifdef PROTO_MSGBUF
     else if ((wlan_chip_id == 55500) || (wlan_chip_id == 55900))
     {
-#if 0	/* To be verified after TO */
+#if 0   /* To be verified after TO */
         if (whd_bus_resume(whd_driver) == WHD_SUCCESS)
         {
             whd_bus_set_state(whd_driver, WHD_TRUE);
@@ -1260,7 +1260,11 @@ static whd_result_t whd_enable_save_restore(whd_driver_t whd_driver)
         CHECK_RETURN(whd_bus_sleep(whd_driver) );
 
         /* Put SPI interface block to sleep */
+#ifdef WHD_DISABLE_SDIO_PULLUP_DURING_SPI_SLEEP
+        CHECK_RETURN(whd_bus_write_register_value(whd_driver, BACKPLANE_FUNCTION, SDIO_PULL_UP, (uint8_t)1, 0x0) );
+#else
         CHECK_RETURN(whd_bus_write_register_value(whd_driver, BACKPLANE_FUNCTION, SDIO_PULL_UP, (uint8_t)1, 0xf) );
+#endif /* WHD_DISABLE_SDIO_PULLUP_DURING_SPI_SLEEP */
 
         whd_driver->chip_info.save_restore_enable = WHD_TRUE;
     }

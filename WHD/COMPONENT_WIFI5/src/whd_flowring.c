@@ -165,7 +165,7 @@ uint32_t whd_flowring_create(struct whd_flowring *flow, uint8_t da[ETHER_ADDR_LE
         if (!ring)
             return -1;
 
-        memcpy(hash[hash_idx].mac, mac, ETHER_ADDR_LEN);
+        whd_mem_memcpy(hash[hash_idx].mac, mac, ETHER_ADDR_LEN);
         hash[hash_idx].fifo = fifo;
         hash[hash_idx].ifidx = ifidx;
         hash[hash_idx].flowid = i;
@@ -195,7 +195,7 @@ void whd_flowring_delete(struct whd_flowring *flow, uint16_t flowid)
 
     hash_idx = ring->hash_id;
     flow->hash[hash_idx].ifidx = WHD_FLOWRING_INVALID_IFIDX;
-    memset(flow->hash[hash_idx].mac, 0, WHD_ETHER_ADDR_LEN);
+    whd_mem_memset(flow->hash[hash_idx].mac, 0, WHD_ETHER_ADDR_LEN);
 
     (void)whd_msgbuf_txflow_dequeue(whd_driver, &skb, flowid);
     while (skb)
@@ -278,7 +278,7 @@ struct whd_flowring *whd_flowring_attach(struct whd_driver *dev, uint16_t nrofri
 
     if (flow)
     {
-        memset(flow, 0, sizeof(*flow));
+        whd_mem_memset(flow, 0, sizeof(*flow));
         flow->dev = dev;
         flow->nrofrings = nrofrings;
 

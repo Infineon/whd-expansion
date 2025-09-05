@@ -212,14 +212,14 @@ struct icmp_echo_hdr {
 #define IP_GET_TYPE(ipaddr)             ((ipaddr)->type)
 
 /**
- * Init, malloc resoures.
+ * Init, whd_mem_malloc resoures.
  *
  * @return None
  */
 void sdio_arb_network_init();
 
 /**
- * Deinit, free resoures.
+ * Deinit, whd_mem_free resoures.
  *
  * @return None.
  */

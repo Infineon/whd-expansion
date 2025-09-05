@@ -17,13 +17,6 @@
 
 print-%  : ; @echo $* = $($*)
 
-# For dual core CEs path ../../mtb_shared
-SEARCH_WIFI_RES := $(filter $(CY_GETLIBS_SHARED_PATH)/$(CY_GETLIBS_SHARED_NAME)/wifi-res%,$(SEARCH_MTB_MK))
-ifeq ($(SEARCH_WIFI_RES),)
-# For single core CEs path ../mtb_shared
-SEARCH_WIFI_RES = $(filter $(CY_GETLIBS_SHARED_PATH)$(CY_GETLIBS_SHARED_NAME)/wifi-res%,$(SEARCH_MTB_MK))
-endif
-
 ifneq ($(filter 55572 55900 55900A0 55500 55530 89530,$(DEVICE_COMPONENTS)),)
 COMPONENTS+=WIFI6
 FW_PATH    := $(SEARCH_wifi-host-driver)/WHD/COMPONENT_WIFI6/resources/firmware
@@ -31,10 +24,6 @@ else
 COMPONENTS+=WIFI5
 FW_PATH    := $(SEARCH_wifi-host-driver)/WHD/COMPONENT_WIFI5/resources/firmware
 endif
-
-$(info The wifi resource path is: $(SEARCH_WIFI_RES))
-NVRAM_PATH := $(addsuffix /nvram, $(SEARCH_WIFI_RES))
-CLM_PATH   := $(addsuffix /clm, $(SEARCH_WIFI_RES))
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)	#macOS
@@ -46,6 +35,37 @@ MACADDR := $(shell grep "macaddr" $(SEARCH_wifi-host-driver)/generated_mac_addre
 endif
 $(info The MAC address is: $(MACADDR))
 
+ifeq ($(filter RESOURCE_READ_FROM_C_FILE,$(DEFINES)),RESOURCE_READ_FROM_C_FILE)
+# Read resource from C file
+    ifeq ($(filter 89530,$(DEVICE_COMPONENTS)),89530)
+    COMPONENTS+=89530
+    else ifeq ($(findstring 55900,$(DEVICE_COMPONENTS)),55900)
+    COMPONENTS+=55900
+    else ifeq ($(findstring 55500,$(DEVICE_COMPONENTS)),55500)
+    COMPONENTS+=55500 
+    else ifeq ($(findstring 55572,$(DEVICE_COMPONENTS)),55572)
+    COMPONENTS+=WIFI6 55572
+    else ifeq ($(findstring 55530,$(DEVICE_COMPONENTS)),55530)
+    COMPONENTS+=WIFI6 55530
+    else ifeq ($(filter 43439,$(DEVICE_COMPONENTS)),43439)
+    COMPONENTS+=43439
+    else ifeq ($(filter 43012,$(DEVICE_COMPONENTS)),43012)
+    COMPONENTS+=43012
+    else ifeq ($(filter 43022,$(DEVICE_COMPONENTS)),43022)
+    COMPONENTS+=43022
+    else ifeq ($(filter 4373,$(DEVICE_COMPONENTS)),4373)
+    COMPONENTS+=4373
+    else ifeq ($(filter 43438,$(DEVICE_COMPONENTS)),43438)
+    COMPONENTS+=43438
+    else ifeq ($(filter 43364,$(DEVICE_COMPONENTS)),43364)
+    COMPONENTS+=43364
+    else ifeq ($(filter 4390X,$(DEVICE_COMPONENTS)),4390X)
+    COMPONENTS+=4390X
+    else ifeq ($(filter 4343W,$(DEVICE_COMPONENTS)),4343W)
+    COMPONENTS+=4343W
+    endif
+else
+# Read resource from bin file
 ifeq ($(filter WIFI6,$(COMPONENTS)),WIFI6)
      ifeq ($(filter SM,$(DEVICE_COMPONENTS))$(filter SM,$(BSP_COMPONENTS)),SM)
      COMP_SECURITY_MODE := COMPONENT_SM

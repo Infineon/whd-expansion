@@ -695,8 +695,6 @@ cy_rslt_t cy_rtos_semaphore_get(cy_semaphore_t* semaphore, cy_time_t timeout_ms)
             }
         }
     }
-    if(status == CY_RTOS_TIMEOUT)
-        // PRINTF("semaphore get timeout\n");
     return status;
 }
 
@@ -1395,4 +1393,4 @@ cy_rslt_t cy_rtos_delay_milliseconds(cy_time_t num_ms)
     return CY_RSLT_SUCCESS;
 }
 
-#endif /* WHD_FREERTOS*/
+#endif /* WHD_FREERTOS */

@@ -21,7 +21,7 @@
  */
 
 #include <string.h>
-#include "bus_protocols/whd_bus_common.h"
+#include "whd_bus_common.h"
 #include "bus_protocols/whd_bus_protocol_interface.h"
 #include "whd_debug.h"
 #include "whd_events_int.h"
@@ -605,13 +605,6 @@ whd_result_t whd_wifi_on(whd_driver_t whd_driver, whd_interface_t *ifpp)
         {
             WPRINT_WHD_INFO( ("Disabled scanmac randomisation for 55500\n") );
         }
-    }
-
-    /* Disabling ampdu hostreorder */
-    if ( (wlan_chip_id == 55500) || (wlan_chip_id == 55530) || (wlan_chip_id == 55572) ||
-         (wlan_chip_id == 55900) || (wlan_chip_id == 89530) )
-    {
-        CHECK_RETURN(whd_wifi_set_iovar_value(ifp, IOVAR_STR_AMPDU_HOST_REORDER, 0) );
     }
 
 #if defined(COMPONENT_WLANSENSE)

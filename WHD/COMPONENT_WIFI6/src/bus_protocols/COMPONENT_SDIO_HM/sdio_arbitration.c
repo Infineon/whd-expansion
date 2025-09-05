@@ -187,7 +187,7 @@ int sdio_arb_add_ip_session(ip_addr_t *local_ip, ip_addr_t *remote_ip,
     }
     ip_ses = whd_mem_malloc(sizeof(ip_session_t));
     if (!ip_ses) {
-        PRINT_HM_ERROR(("[%s:%d] malloc buffer failed\n", __func__, __LINE__));
+        PRINT_HM_ERROR(("[%s:%d] whd_mem_malloc buffer failed\n", __func__, __LINE__));
         return -1;
     }
     whd_mem_memcpy(&ip_ses->local_ip, local_ip, sizeof(ip_addr_t));
@@ -238,7 +238,7 @@ int sdio_arb_del_ip_session(ip_session_t *del_ip_ses)
         }
 
         ip_ses->next = NULL;
-        free(ip_ses);
+        whd_mem_free(ip_ses);
         ip_session_number -= 1;
     }
     sdio_arb_mutex_unlock();
@@ -445,11 +445,11 @@ static void *sdio_arb_timer_callback(void* arg)
             if (g_ip_session == ip_ses) {
                 g_ip_session = ip_ses->next;
                 pre_ip_ses = g_ip_session;
-                free(ip_ses);
+                whd_mem_free(ip_ses);
                 ip_ses = g_ip_session;
             } else {
                 pre_ip_ses->next = ip_ses->next;
-                free(ip_ses);
+                whd_mem_free(ip_ses);
                 ip_ses = pre_ip_ses->next;
             }
 

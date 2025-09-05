@@ -16,8 +16,11 @@
  */
 
 #include "whd.h"
+#ifdef WHD_CUSTOM_HAL
+#include "whd_bus_protocol_interface.h"
+#else
 #include "bus_protocols/whd_bus_protocol_interface.h"
-
+#endif /* WHD_CUSTOM_HAL */
 #ifndef INCLUDED_SDIO_WHD_BUS_PROTOCOL_H
 #define INCLUDED_SDIO_WHD_BUS_PROTOCOL_H
 
@@ -28,7 +31,9 @@ extern "C" {
 /******************************************************
 *                      Macros
 ******************************************************/
+#ifndef BIT_MASK
 #define BIT_MASK(x)         ( (1 << x) - 1 )
+#endif
 
 #define WHD_BUS_HEADER_SIZE                     (0)
 

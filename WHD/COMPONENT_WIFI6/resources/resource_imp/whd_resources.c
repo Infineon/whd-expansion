@@ -18,11 +18,17 @@
 /** @file
  * Defines WHD resource functions for BCM943340WCD1 platform
  */
+#include "cy_utils.h"
+#include "cmsis_compiler.h"
 #include "resources.h"
 #if !defined(NO_CLM_BLOB_FILE)
 #include "clm_resources.h"
 #endif /* NO_CLM_BLOB_FILE */
+#ifndef RESOURCE_READ_FROM_C_FILE
 #include "wifi_nvram_image.h"
+#else
+#include "wifi_nvram_image_data.h"
+#endif /* #ifndef RESOURCE_READ_FROM_C_FILE */
 #include "whd_resource_api.h"
 #include "whd_debug.h"
 #include "whd.h"
@@ -41,10 +47,17 @@
 #define NVRAM_SIZE             dynamic_nvram_size
 #define NVRAM_IMAGE_VARIABLE   dynamic_nvram_image
 #else
+#ifndef RESOURCE_READ_FROM_C_FILE
 #define NVRAM_SIZE             NVRAM_IMAGE_SIZE
+#else
+#define NVRAM_SIZE             sizeof(wifi_nvram_image)
+#endif /* ifndef RESOURCE_READ_FROM_C_FILE */
 #define NVRAM_IMAGE_VARIABLE   wifi_nvram_image
-#endif
+#endif /* defined(WHD_DYNAMIC_NVRAM) */
+
+#ifndef RESOURCE_READ_FROM_C_FILE
 #define CLM_SIZE CLM_IMAGE_SIZE
+#endif /* ifndef RESOURCE_READ_FROM_C_FILE */
 
 /******************************************************
 *                   Enumerations
@@ -74,13 +87,11 @@ whd_result_t host_resource_read(whd_driver_t whd_drv, whd_resource_type_t type,
 *               Variable Definitions
 ******************************************************/
 
-extern const resource_hnd_t wifi_firmware_image;
-extern const resource_hnd_t wifi_firmware_clm_blob;
 #ifdef DOWNLOAD_RAM_BOOTLOADER
 extern const resource_hnd_t wifi_bootloader_image;
 #endif /* DOWNLOAD_RAM_BOOTLOADER */
 
-unsigned char r_buffer[BLOCK_BUFFER_SIZE];
+CY_ALIGN(4) unsigned char r_buffer[BLOCK_BUFFER_SIZE];
 
 #if defined(WHD_DYNAMIC_NVRAM)
 uint32_t dynamic_nvram_size = sizeof(wifi_nvram_image);
@@ -203,7 +214,11 @@ whd_result_t host_platform_resource_size(whd_driver_t whd_drv, whd_resource_type
 #if defined(NO_CLM_BLOB_FILE)
         *size_out = 0;
 #else
+#ifndef RESOURCE_READ_FROM_C_FILE
         *size_out = CLM_SIZE;
+#else
+        *size_out = (uint32_t)resource_get_size(&wifi_firmware_clm_blob);
+#endif /* ifndef RESOURCE_READ_FROM_C_FILE */
 #endif /* NO_CLM_BLOB_FILE */
     }
     return WHD_SUCCESS;
@@ -265,23 +280,34 @@ whd_result_t host_get_resource_block(whd_driver_t whd_drv, whd_resource_type_t t
 #endif /* DOWNLOAD_RAM_BOOTLOADER */
     else if (type == WHD_RESOURCE_WLAN_NVRAM)
     {
-		uint32_t i;
-       result = resource_read( (const resource_hnd_t *)&wifi_nvram_image, read_pos, block_size, size_out,
+#ifndef RESOURCE_READ_FROM_C_FILE
+        uint32_t i;
+        result = resource_read( (const resource_hnd_t *)&wifi_nvram_image, read_pos, block_size, size_out,
                                 r_buffer );
-		 /* convert the newline to null-terminator */
+        /* convert the newline to null-terminator */
         for (i = 0; i < block_size; i++)
         {
             if (r_buffer[i] == 0xa)
             {
-		r_buffer[i] = 0x0;
+                r_buffer[i] = 0x0;
             }
         }
-       if (result != WHD_SUCCESS)
+        if (result != WHD_SUCCESS)
         {
             return result;
         }
         *data = (uint8_t *)&r_buffer;
-
+#else
+        if (NVRAM_SIZE - read_pos > block_size)
+        {
+            *size_out = block_size;
+        }
+        else
+        {
+            *size_out = NVRAM_SIZE - read_pos;
+        }
+        *data = ( (uint8_t *)NVRAM_IMAGE_VARIABLE ) + read_pos;
+#endif /* ifndef RESOURCE_READ_FROM_C_FILE */
     }
     else
     {
@@ -360,13 +386,14 @@ whd_result_t host_resource_read(whd_driver_t whd_drv, whd_resource_type_t type,
 #endif /* DOWNLOAD_RAM_BOOTLOADER */
     else if (type == WHD_RESOURCE_WLAN_NVRAM)
     {
-		uint32_t i,len;
+#ifndef RESOURCE_READ_FROM_C_FILE
+        uint32_t i,len;
         uint8_t *nvrame_data = NULL;
-		result = resource_read( (const resource_hnd_t *)&wifi_nvram_image, offset, size,
+        result = resource_read( (const resource_hnd_t *)&wifi_nvram_image, offset, size,
                                 size_out, buffer );
-		nvrame_data = (uint8_t *) buffer;
-		len=*size_out;
-		 /* convert the newline to null-terminator */
+        nvrame_data = (uint8_t *) buffer;
+        len=*size_out;
+        /* convert the newline to null-terminator */
         for (i = 0; i < len; i++)
         {
             if (nvrame_data[i] == 0xa)
@@ -374,8 +401,16 @@ whd_result_t host_resource_read(whd_driver_t whd_drv, whd_resource_type_t type,
                 nvrame_data[i] = 0x0;
             }
         }
-		if (result != WHD_SUCCESS)
+        if (result != WHD_SUCCESS)
             return result;
+#else
+        if (size != sizeof(wifi_nvram_image) )
+        {
+            return WHD_BUFFER_SIZE_SET_ERROR;
+        }
+        whd_mem_memcpy( (uint8_t *)buffer, wifi_nvram_image, sizeof(wifi_nvram_image) );
+        *size_out = sizeof(wifi_nvram_image);
+#endif /* ifndef RESOURCE_READ_FROM_C_FILE */
      }
     return WHD_SUCCESS;
 }

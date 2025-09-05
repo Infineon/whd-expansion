@@ -37,6 +37,68 @@
 #define OTP_WORD_SIZE 16    /* Word size in bits */
 #define WPA_OUI_TYPE1                     "\x00\x50\xF2\x01"   /** WPA OUI */
 
+#ifdef CONFIG_WIFI_NM_WPA_SUPPLICANT
+static chan_info_t chan_info[] = {
+    /* B channels */
+    { 1,    2412,    0,    0},
+    { 2,    2417,    0,    0},
+    { 3,    2422,    0,    0},
+    { 4,    2427,    0,    0},
+    { 5,    2432,    0,    0},
+    { 6,    2437,    0,    0},
+    { 7,    2442,    0,    0},
+    { 8,    2447,    0,    0},
+    { 9,    2452,    0,    0},
+    { 10,   2457,    0,    0},
+    { 11,   2462,    0,    0},
+    { 12,   2467,    0,    0},
+    { 13,   2472,    0,    0},
+    { 14,   2484,    0,    0},
+
+    /* A channels */
+    /* 11a usa low */
+    { 36,   5180,    0,    HOSTAPD_CHAN_VHT_80MHZ_SUBCHANNEL},
+    { 40,   5200,    0,    HOSTAPD_CHAN_VHT_160MHZ_SUBCHANNEL},
+    { 44,   5220,    0,    HOSTAPD_CHAN_EHT_320MHZ_SUBCHANNEL},
+    { 48,   5240,    0,    HOSTAPD_CHAN_EHT_320MHZ_SUBCHANNEL},
+    { 52,   5260,    1,    0},
+    { 56,   5280,    1,    0},
+    { 60,   5300,    1,    0},
+    { 64,   5320,    1,    0},
+
+    /* 11a Europe */
+    { 100,  5500,    1,    0},
+    { 104,  5520,    1,    0},
+    { 108,  5540,    1,    0},
+    { 112,  5560,    1,    0},
+    { 116,  5580,    1,    0},
+    { 120,  5600,    1,    0},
+    { 124,  5620,    1,    0},
+    { 128,  5640,    1,    0},
+    { 132,  5660,    1,    0},
+    { 136,  5680,    1,    0},
+    { 140,  5700,    1,    0},
+    { 144,  5720,    1,    0},
+
+    /* 11a usa high */
+    { 149,  5745,    0,    HOSTAPD_CHAN_VHT_80MHZ_SUBCHANNEL},
+    { 153,  5765,    0,    HOSTAPD_CHAN_VHT_160MHZ_SUBCHANNEL},
+    { 157,  5785,    0,    HOSTAPD_CHAN_EHT_320MHZ_SUBCHANNEL},
+    { 161,  5805,    0,    HOSTAPD_CHAN_EHT_320MHZ_SUBCHANNEL},
+    { 165,  5825,    0,    0},
+
+    /* 11a japan */
+    { 184,  4920,    0,    0},
+    { 188,  4940,    0,    0},
+    { 192,  4960,    0,    0},
+    { 196,  4980,    0,    0},
+    { 200,  5000,    0,    0},
+    { 204,  5020,    0,    0},
+    { 208,  5040,    0,    0},
+    { 212,  5060,    0,    0},
+    { 216,  5080,    0,    0}
+};
+#endif
 #ifdef PROTO_MSGBUF
 typedef struct dma_pool
 {
@@ -1232,9 +1294,29 @@ uint8_t whd_ip4_to_string(const void *ip4addr, char *p)
     // Return length of generated string, excluding the terminating null character
     return outputPos;
 }
+#ifdef CONFIG_WIFI_NM_WPA_SUPPLICANT
+uint whd_channel2freq(uint chan)
+{
+    for (int i = 0; i < (int)ARRAY_SIZE(chan_info); i++) {
+        if (chan_info[i].chan == chan)
+            return (chan_info[i].freq);
+    }
+    return (0);
+}
 
+void swap_key_from_host(wl_wsec_key_t* key)
+{
+    key->index = htod32(key->index);
+    key->len = htod32(key->len);
+    key->algo = htod32(key->algo);
+    key->flags = htod32(key->flags);
+    key->rxiv.hi = htod32(key->rxiv.hi);
+    key->rxiv.lo = htod16(key->rxiv.lo);
+    key->iv_initialized = htod32(key->iv_initialized);
+    return;
+}
+#endif
 #ifndef WHD_USE_CUSTOM_MALLOC_IMPL
-
 inline void whd_mem_memcpy (void *dest, const void *src, size_t len)
 {
 #ifdef PROTO_MSGBUF

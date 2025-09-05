@@ -321,7 +321,7 @@ static struct whd_ringbuf *whd_allocate_ring_and_handle(whd_driver_t whd_driver,
     {
         return NULL;
     }
-    memset(ring, 0, sizeof(*ring) );
+    whd_mem_memset(ring, 0, sizeof(*ring) );
     whd_commonring_config(&ring->commonring, whd_ring_max_item[ring_id],
                           ring_itemsize_array[ring_id], (void*)ring_handle);
 
@@ -532,7 +532,7 @@ whd_result_t whd_bus_m2m_sharedmem_init(whd_driver_t whd_driver)
     {
         return WHD_MALLOC_FAILURE;
     }
-    memset(ram_shared_info, 0, sizeof(struct whd_ram_shared_info));
+    whd_mem_memset(ram_shared_info, 0, sizeof(struct whd_ram_shared_info));
 
     whd_driver->ram_shared = ram_shared_info;
 

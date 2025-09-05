@@ -16,6 +16,7 @@
 
 #ifndef INCLUDED_NVRAM_IMAGE_H_
 #define INCLUDED_NVRAM_IMAGE_H_
+#ifndef RESOURCE_READ_FROM_C_FILE
 
 #include <string.h>
 #include <stdint.h>
@@ -46,4 +47,5 @@ const resource_hnd_t wifi_nvram_image = { RESOURCE_IN_MEMORY, NVRAM_IMAGE_SIZE, 
 
 #error Wi-Fi NVRAM image included twice
 
+#endif /* ifndef RESOURCE_READ_FROM_C_FILE */
 #endif /* ifndef INCLUDED_NVRAM_IMAGE_H_ */

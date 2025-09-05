@@ -23,7 +23,11 @@
 #include "whd_chip.h"
 #include "whd_events_int.h"
 #include "whd_types_int.h"
+#include "whd_wlioctl.h"
 
+#ifdef CONFIG_WIFI_NM_WPA_SUPPLICANT
+#include <driver.h>
+#endif
 #ifdef PROTO_MSGBUF
 #include "whd_hw.h"
 #endif
@@ -45,6 +49,8 @@ extern "C" {
 #define  ROUNDUP(x, y)      ( ( ( (x) + ( (y) - 1 ) ) / (y) ) * (y) )
 #define  ROUNDDN(p, align)  ( (p)& ~( (align) - 1 ) )
 
+#define ETHER_ISMULTI(ea) ( ( (const uint8_t *)(ea) )[0] & 1 )
+
 #ifdef BUS_ENC
 #define GCM_KEY_SIZE 128
 #define GCM_KEY_SIZE_BYTES 16
@@ -56,6 +62,17 @@ static const unsigned char aad[20] =  { 0xfe, 0xed, 0xfa, 0xce, 0xde, 0xad, 0xbe
                                         0xab, 0xad, 0xda, 0xd2 };
 #endif /* BUS_ENC */
 
+#ifdef CONFIG_WIFI_NM_WPA_SUPPLICANT
+#define WPA_PROTO_WPA3 BIT(4) /* Local define if SAE and RNS support */ 
+
+/* channel info structure */
+typedef struct {
+    uint    chan;       /* channel number */
+    uint    freq;       /* in Mhz */
+    uint    dfs;        /* dfs channel or not */
+    uint    vht80_flag; /* vht80 flag */
+} chan_info_t;
+#endif
 /**
  * Get the offset (in bytes) of a member within a structure
  */
@@ -67,6 +84,7 @@ static const unsigned char aad[20] =  { 0xfe, 0xed, 0xfa, 0xce, 0xde, 0xad, 0xbe
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(a)                                 (sizeof(a) / sizeof(a[0]) )
 #endif
+
 #ifdef PROTO_MSGBUF
 uint32_t whd_dmapool_init(uint32_t memory_size);
 void* whd_dmapool_alloc( int size);
@@ -235,7 +253,7 @@ uint8_t whd_ip4_to_string(const void *ip4addr, char *p);
  ******************************************************************************
  * The wrapper function for memory allocation.
  * It allocates the requested memory and returns a pointer to it.
- * In default implementation it uses The C library function malloc().
+ * In default implementation it uses The C library function memcpy().
  *
  * Use macro WHD_USE_CUSTOM_MALLOC_IMPL (-D) for custom whd_mem_memcpy/
  * whd_mem_calloc/whd_mem_free inplemetation.
@@ -248,7 +266,7 @@ void whd_mem_memcpy (void *dest, const void *src, size_t len);
  ******************************************************************************
  * The wrapper function for memory allocation.
  * It allocates the requested memory and returns a pointer to it.
- * In default implementation it uses The C library function malloc().
+ * In default implementation it uses The C library function memset().
  *
  * Use macro WHD_USE_CUSTOM_MALLOC_IMPL (-D) for custom whd_mem_memset/
  * whd_mem_calloc/whd_mem_free inplemetation.
@@ -281,7 +299,7 @@ void *whd_mem_malloc(size_t size);
  * It allocates the requested memory and sets allocated memory to zero.
  * In default implementation it uses The C library function calloc().
  *
- * Use macro WHD_USE_CUSTOM_MALLOC_IMPL (-D) for custom whd_mem_malloc/
+ * Use macro WHD_USE_CUSTOM_MALLOC_IMPL (-D) for custom whd_mem_calloc/
  * whd_mem_calloc/whd_mem_free inplemetation.
  *
  * @param[in] nitems   :  This is the number of elements to be allocated.
@@ -295,10 +313,10 @@ void *whd_mem_calloc(size_t nitems, size_t size);
 
 /*!
  ******************************************************************************
- * The wrapper function for free allocated memory.
+ * The wrapper function for whd_mem_free allocated memory.
  * In default implementation it uses The C library function free().
  *
- * Use macro WHD_USE_CUSTOM_MALLOC_IMPL (-D) for custom whd_mem_malloc/
+ * Use macro WHD_USE_CUSTOM_MALLOC_IMPL (-D) for custom whd_mem_free/
  * whd_mem_calloc/whd_mem_free inplemetation.
  *
  * @param[in] ptr     :  pointer to a memory block previously allocated
@@ -306,6 +324,21 @@ void *whd_mem_calloc(size_t nitems, size_t size);
  * @return
  */
 void whd_mem_free(void *ptr);
+
+/*!
+ ******************************************************************************
+ * The utility function for returning frequency based on the channel.
+ *
+ * @param[in] chan     :  This is the channel number
+ * @param[in] size     :  This is the size of elements.
+ *
+ * @return
+ *  This function returns the frequency in the form of a uint or zero if the channel
+ *  does not exist in the maintained chan_info list.
+ */
+uint whd_channel2freq(uint chan);
+
+void swap_key_from_host(wl_wsec_key_t* key);
 
 #ifdef __cplusplus
 } /* extern "C" */
