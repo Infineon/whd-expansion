@@ -29,7 +29,7 @@
 
 #pragma once
 
-#ifdef WHD_FREERTOS
+#ifdef WHD_RTOS
 
 #include "cyabs_rtos_impl.h"
 #include "cy_result.h"
@@ -1424,4 +1424,4 @@ extern cy_rslt_t cy_rtos_delay_milliseconds(cy_time_t num_ms);
 } // extern "C"
 #endif
 
-#endif /* WHD_FREERTOS*/
+#endif /* WHD_RTOS */

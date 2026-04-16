@@ -33,7 +33,7 @@
  *
  */
 
-#if defined(WHD_CUSTOM_HAL) && defined(IMXRT)
+#if defined(IMXRT)
 
 #include "cyhal_gpio.h"
 
@@ -76,4 +76,4 @@ void cyhal_gpio_irq_enable(cyhal_gpio_t pin, cyhal_gpio_irq_event_t event, bool 
 
 }
 
-#endif /* WHD_CUSTOM_HAL && IMXRT */
+#endif /* defined(IMXRT) */

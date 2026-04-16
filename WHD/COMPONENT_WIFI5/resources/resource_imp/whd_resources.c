@@ -18,7 +18,9 @@
 /** @file
  * Defines WHD resource functions for BCM943340WCD1 platform
  */
+#ifndef WHD_FREERTOS
 #include "cy_utils.h"
+#endif  /* WHD_FREERTOS */
 #include "cmsis_compiler.h"
 #include "resources.h"
 #if !defined(NO_CLM_BLOB_FILE)
@@ -87,7 +89,11 @@ whd_result_t host_resource_read(whd_driver_t whd_drv, whd_resource_type_t type,
 /******************************************************
 *               Variable Definitions
 ******************************************************/
+#ifndef WHD_FREERTOS
 CY_ALIGN(4) unsigned char r_buffer[BLOCK_BUFFER_SIZE];
+#else
+unsigned char r_buffer[BLOCK_BUFFER_SIZE];
+#endif  /* WHD_FREERTOS */
 
 #if defined(WHD_DYNAMIC_NVRAM)
 uint32_t dynamic_nvram_size = sizeof(wifi_nvram_image);
@@ -197,7 +203,7 @@ whd_result_t host_platform_resource_size(whd_driver_t whd_drv, whd_resource_type
     }
     else if (resource == WHD_RESOURCE_WLAN_NVRAM)
     {
-        *size_out = NVRAM_SIZE;
+        *size_out = (uint32_t)NVRAM_SIZE;
     }
     else
     {
@@ -205,7 +211,7 @@ whd_result_t host_platform_resource_size(whd_driver_t whd_drv, whd_resource_type
         *size_out = 0;
 #else
 #ifndef RESOURCE_READ_FROM_C_FILE
-        *size_out = CLM_SIZE;
+        *size_out = (uint32_t)CLM_SIZE;
 #else
         *size_out = (uint32_t)resource_get_size(&wifi_firmware_clm_blob);
 #endif /* ifndef RESOURCE_READ_FROM_C_FILE */

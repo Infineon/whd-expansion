@@ -21,13 +21,21 @@
  */
 
 #include <stdint.h>
-
-#ifdef COMPONENT_4390X
+#include <stdbool.h>
 #include "cybsp.h"
 #include "cy_result.h"
-#include "cyhal_hw_types.h"
+
+#ifndef WHD_USE_CUSTOM_HAL_IMPL
+	#include "cyhal_hw_types.h"
+	#include "cyhal_gpio.h"
+#if (CYBSP_WIFI_INTERFACE_TYPE == CYBSP_SDIO_INTERFACE)
+	#include "cyhal_sdio.h"
+#elif (CYBSP_WIFI_INTERFACE_TYPE == CYBSP_SPI_INTERFACE)
+	#include "cyhal_spi.h"
+#elif (CYBSP_WIFI_INTERFACE_TYPE == CYBSP_M2M_INTERFACE)
+	#include "cyhal_m2m.h"
 #endif
-#include "cyhal_gpio.h"
+#endif /* ifndef WHD_USE_CUSTOM_HAL_IMPL */
 
 #ifndef INCLUDED_WHD_TYPES_H_
 #define INCLUDED_WHD_TYPES_H_
@@ -65,7 +73,7 @@ extern "C"
 #define ULP_OOB_INTR_MODE           (1) /**< Use OOB interrupt method, when device is in DS2 state Exit */
 #define ULP_ASYNC_INTR_MODE         (2) /**< Use Asynchronous method, when device is in DS2 state Exit */
 
-#define PMKID_LEN                   (16) /**< PMKID LENGTH */
+#define PMKID_LENGTH                (16) /**< PMKID LENGTH */
 
 #define ULP_NO_SUPPORT              (0) /**< Flag to disable ULP in 43022 */
 #define ULP_DS1_SUPPORT             (1) /**< Flag to enable DS1 mode in 43022 */
@@ -114,6 +122,25 @@ typedef struct whd_tko_auto_filter whd_tko_auto_filter_t;
 typedef struct whd_tko_autoconnect whd_tko_autoconnect_t;
 typedef struct tls_param_info  tls_param_info_t;
 typedef struct secure_sess_info secure_sess_info_t;
+#ifndef WHD_USE_CUSTOM_HAL_IMPL
+#define WHD_NC_PIN_VALUE CYHAL_NC_PIN_VALUE
+typedef cyhal_gpio_t whd_gpio_t;
+typedef cyhal_gpio_drive_mode_t whd_gpio_drive_mode_t;
+#if (CYBSP_WIFI_INTERFACE_TYPE == CYBSP_SDIO_INTERFACE)
+typedef cyhal_sdio_t whd_sdio_t;
+#elif (CYBSP_WIFI_INTERFACE_TYPE == CYBSP_SPI_INTERFACE)
+typedef cyhal_spi_t whd_spi_t;
+#elif (CYBSP_WIFI_INTERFACE_TYPE == CYBSP_M2M_INTERFACE)
+typedef cyhal_m2m_t whd_m2m_t;
+#endif
+#else
+#define WHD_NC_PIN_VALUE	NULL
+typedef void* whd_gpio_t;
+typedef uint8_t whd_gpio_drive_mode_t;
+typedef void* whd_sdio_t;
+typedef void* whd_spi_t;
+typedef void* whd_m2m_t;
+#endif /* ifndef WHD_USE_CUSTOM_HAL_IMPL */
 /** @endcond */
 /******************************************************
 *                    Constants
@@ -802,40 +829,6 @@ typedef struct
     int32_t scan_home_channel_dwell_time_between_channels_ms; /**< Period of time to wait on the home channel when scanning. Only relevant if associated. */
 } whd_scan_extended_params_t;
 
-/**
- * Structure for storing scan results
- */
-#pragma pack(1)
-typedef struct whd_scan_result
-{
-    whd_ssid_t SSID;                            /**< Service Set Identification (i.e. Name of Access Point)                    */
-    whd_mac_t BSSID;                            /**< Basic Service Set Identification (i.e. MAC address of Access Point)       */
-    int16_t signal_strength;                    /**< Receive Signal Strength Indication in dBm. <-90=Very poor, >-30=Excellent */
-    uint32_t max_data_rate;                     /**< Maximum data rate in kilobits/s                                           */
-    whd_bss_type_t bss_type;                    /**< Network type                                                              */
-    whd_security_t security;                    /**< Security type                                                             */
-    uint8_t channel;                            /**< Radio channel that the AP beacon was received on                          */
-    whd_802_11_band_t band;                     /**< Radio band                                                                */
-    uint8_t ccode[2];                           /**< Two letter ISO country code from AP                                       */
-    uint8_t flags;                              /**< flags                                                                     */
-    struct whd_scan_result *next;               /**< Pointer to the next scan result                                           */
-    uint8_t *ie_ptr;                            /**< Pointer to received Beacon/Probe Response IE(Information Element)         */
-    uint32_t ie_len;                            /**< Length of IE(Information Element)                                         */
-} whd_scan_result_t;
-#pragma pack()
-
-/**
- * Structure to store scan result parameters for each AP
- */
-typedef struct whd_simple_scan_result
-{
-    whd_ssid_t SSID;         /**< Service Set Identification (i.e. Name of Access Point)                    */
-    whd_mac_t BSSID;         /**< Basic Service Set Identification (i.e. MAC address of Access Point)       */
-    int16_t signal_strength; /**< Receive Signal Strength Indication in dBm. <-90=Very poor, >-30=Excellent */
-    whd_security_t security; /**< Security type                                                             */
-    uint8_t channel;         /**< Radio channel that the AP beacon was received on                          */
-} whd_sync_scan_result_t;
-
 typedef uint16_t wl_chanspec_t;  /**< Channel specified in uint16_t */
 #define MCSSET_LEN    16 /**< Maximum allowed mcs rate */
 
@@ -883,6 +876,40 @@ typedef struct wl_bss_info_struct
     /* Add new fields here */
     /* variable length Information Elements */
 } wl_bss_info_t;
+
+/**
+ * Structure for storing scan results
+ */
+#pragma pack(1)
+typedef struct whd_scan_result
+{
+    whd_ssid_t SSID;                            /**< Service Set Identification (i.e. Name of Access Point)                    */
+    whd_mac_t BSSID;                            /**< Basic Service Set Identification (i.e. MAC address of Access Point)       */
+    int16_t signal_strength;                    /**< Receive Signal Strength Indication in dBm. <-90=Very poor, >-30=Excellent */
+    uint32_t max_data_rate;                     /**< Maximum data rate in kilobits/s                                           */
+    whd_bss_type_t bss_type;                    /**< Network type                                                              */
+    whd_security_t security;                    /**< Security type                                                             */
+    uint8_t channel;                            /**< Radio channel that the AP beacon was received on                          */
+    whd_802_11_band_t band;                     /**< Radio band                                                                */
+    uint8_t ccode[2];                           /**< Two letter ISO country code from AP                                       */
+    uint8_t flags;                              /**< flags                                                                     */
+    struct whd_scan_result *next;               /**< Pointer to the next scan result                                           */
+    uint8_t *ie_ptr;                            /**< Pointer to received Beacon/Probe Response IE(Information Element)         */
+    uint32_t ie_len;                            /**< Length of IE(Information Element)                                         */
+} whd_scan_result_t;
+#pragma pack()
+
+/**
+ * Structure to store scan result parameters for each AP
+ */
+typedef struct whd_simple_scan_result
+{
+    whd_ssid_t SSID;         /**< Service Set Identification (i.e. Name of Access Point)                    */
+    whd_mac_t BSSID;         /**< Basic Service Set Identification (i.e. MAC address of Access Point)       */
+    int16_t signal_strength; /**< Receive Signal Strength Indication in dBm. <-90=Very poor, >-30=Excellent */
+    whd_security_t security; /**< Security type                                                             */
+    uint8_t channel;         /**< Radio channel that the AP beacon was received on                          */
+} whd_sync_scan_result_t;
 
 /** Structure for storing 802.11 powersave listen interval values \n
  *  See @ref whd_wifi_get_listen_interval for more information
@@ -1073,7 +1100,7 @@ typedef struct
 typedef struct _pmkid
 {
     whd_mac_t BSSID;
-    uint8_t PMKID[PMKID_LEN];
+    uint8_t PMKID[PMKID_LENGTH];
 } pmkid_t;
 
 typedef struct _pmkid_list
@@ -1092,7 +1119,7 @@ typedef struct whd_auth_req_status
     whd_mac_t peer_mac; /* peer mac address */
     uint32_t ssid_len;
     uint8_t ssid[SSID_NAME_SIZE];
-    uint8_t pmkid[PMKID_LEN];
+    uint8_t pmkid[PMKID_LENGTH];
 } whd_auth_req_status_t;
 
 /**
@@ -1246,8 +1273,13 @@ typedef struct
  */
 typedef struct whd_oob_config
 {
+#ifndef WHD_USE_CUSTOM_HAL_IMPL
     cyhal_gpio_t host_oob_pin;          /**< Host-side GPIO pin selection */
     cyhal_gpio_drive_mode_t drive_mode; /**< Host-side GPIO pin drive mode */
+#else
+    whd_gpio_t host_oob_pin;            /**< Host-side GPIO pin selection */
+    whd_gpio_drive_mode_t drive_mode;   /**< Host-side GPIO pin drive mode */
+#endif /* WHD_USE_CUSTOM_HAL_IMPL */
     whd_bool_t init_drive_state;        /**< Host-side GPIO pin initial drive state */
     uint8_t dev_gpio_sel;               /**< WiFi device-side GPIO pin selection (must be zero) */
     whd_bool_t is_falling_edge;         /**< Interrupt trigger (polarity) */
@@ -1491,6 +1523,10 @@ typedef struct {
     } u;
 } whd_icmp_echo_req_event_data_t;
 
+typedef struct {
+    uint8_t *event_data;
+    whd_event_header_t *event_header;
+} whd_event_data_t;
 #ifdef __cplusplus
 }     /* extern "C" */
 #endif

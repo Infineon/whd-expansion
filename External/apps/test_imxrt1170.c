@@ -1,7 +1,7 @@
  /*
- * Test application for IMXRT1170 + H1A1 to join and ping an AP
+ * Command Console test application for IMXRT1170 + H1A1 to run Wifi / Cert / QT commands
  */
-#if defined(WHD_CUSTOM_HAL) && defined(IMXRT)
+#if defined(IMXRT)
 
 #include <stdio.h>
 #include <string.h>
@@ -11,6 +11,7 @@
 #include "fsl_gpio.h"
 #include "fsl_sdio.h"
 #include "fsl_debug_console.h"
+#include "cybsp_wifi.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
@@ -21,304 +22,158 @@
 #include "whd_network_mw_core.h"
 #include "whd_custom_hal_sdio.h"
 #include "wpa3_wcm_intf.h"
+#ifdef WHD_USE_WCM
+#include "cy_wcm.h"
+//#include "iperf_utility.h"
+#ifdef ENABLE_SIGMA_TOOL
+#include "wifi_app_intf.h"
+#endif /* ENABLE_SIGMA_TOOL */
+#endif /* WHD_USE_WCM */
+#include "command_console.h"
+#include "wifi_utility.h"
 
-/* Enable this for Soft AP bring up sample code */
-//#define SAP
+/* Default configurations for Command Console library */
+#define CONSOLE_COMMAND_MAX_PARAMS     (32)
+#define CONSOLE_COMMAND_MAX_LENGTH     (256) //Increased from 85 to 256 for Sigma
+#define CONSOLE_COMMAND_HISTORY_LENGTH (10)
+#define CONSOLE_THREAD_PRIORITY        (2)
 
-#define WIFI_TASK_PRIO (3)
-#define WIFI_TASK_STACK_SIZE (1024*4)
+const char *console_delimiter_string = ","; //Use comma instead of space for Sigma
 
-TaskHandle_t wifi_task_handler;
-__attribute__((aligned(8))) uint8_t wifi_app_stack[WIFI_TASK_STACK_SIZE] = {0};
+static char command_buffer[CONSOLE_COMMAND_MAX_LENGTH];
+static char command_history_buffer[CONSOLE_COMMAND_MAX_LENGTH * CONSOLE_COMMAND_HISTORY_LENGTH];
 
-cy_thread_t app_thread;
+/* Task parameters for Console task */
+#define CONSOLE_TASK_PRIORITY          (1)
+#define CONSOLE_TASK_STACK_SIZE        (1024 * 4)
 
-static cyhal_sdio_t sdio_obj;
-cyhal_sdio_t* obj = &sdio_obj;
+/* The interface count needs to match with WCM */
+#define MAX_WHD_INTERFACES             (2)
 
-whd_driver_t whd_driver;
-
-whd_interface_t whd_ifs[2];
-
-#ifdef SAP
-typedef enum
-{
-    WHD_BAND_5GHZ   = 0xC0,    /**< 5-GHz radio band.   */
-    WHD_BAND_2_4GHZ = 0x00,    /**< 2.4-GHz radio band. */
-    WHD_BAND_6GHZ   = 0x80     /**< 6-GHz radio band.   */
-} whd_band_t;
-
-#define SOFTAP_SSID                                  "AP_SSID"
-#define SOFTAP_PASSWORD                              "AP_PASSWORD"
-#define SOFTAP_SECURITY_TYPE                         WHD_SECURITY_WPA2_AES_PSK
-#define SOFTAP_CHANNEL                               11
-#define SOFTAP_BAND                                  WHD_BAND_2_4GHZ
-#define SOFTAP_IP_ADDRESS                            MAKE_IPV4_ADDRESS(192, 168, 0,  2)
-#define SOFTAP_NETMASK                               MAKE_IPV4_ADDRESS(255, 255, 255, 0)
-#define SOFTAP_GATEWAY                               MAKE_IPV4_ADDRESS(192, 168, 0,  2)
-
-static const whd_network_static_ip_addr_t ap_ip_settings =
-{
-    INITIALISER_IPV4_ADDRESS( .addr, SOFTAP_IP_ADDRESS),
-    INITIALISER_IPV4_ADDRESS( .netmask,    SOFTAP_NETMASK),
-    INITIALISER_IPV4_ADDRESS( .gateway,    SOFTAP_GATEWAY),
-};
+#ifdef WHD_USE_WCM
+extern whd_interface_t whd_ifs[MAX_WHD_INTERFACES];
+static cy_wcm_config_t wcm_config = {.interface = CY_WCM_INTERFACE_TYPE_AP_STA};
 #else
-#define WIFI_SSID                                   "WIFI_SSID"
-#define WIFI_PASSWORD                               "WIFI_PASSWORD"
-#define WIFI_SECURITY                               WHD_SECURITY_WPA2_AES_PSK
-#define CONNECT_RETRY_COUNT                         10
-#endif
+whd_interface_t whd_ifs[MAX_WHD_INTERFACES];
+whd_net_interface_t whd_interface_type = CY_NET_INTERFACE_TYPE_STA;
+#endif /* WHD_USE_WCM */
 
-#ifdef SAP
-cy_rslt_t StartSoftAP()
+cy_rslt_t command_console_add_command();
+
+cy_rslt_t command_console_add_command(void)
 {
-    cy_rslt_t res = CY_RSLT_SUCCESS ;
-    whd_nw_ip_address_t ipv4_addr;
-    char ip_str[IP_STR_LEN];
-    whd_ssid_t ssid;
-    uint8_t *key = SOFTAP_PASSWORD;
-    uint8_t keylen = strlen(SOFTAP_PASSWORD);
-    whd_security_t ap_security = SOFTAP_SECURITY_TYPE;
-    uint8_t channel = SOFTAP_CHANNEL;
-    uint16_t chanspec = SOFTAP_BAND;
-    whd_network_static_ip_addr_t static_ip;
-    whd_network_interface_context *nw_if_ctx;
-
-    memset(&ipv4_addr, 0, sizeof(whd_nw_ip_address_t));
-    memset(ip_str, 0, sizeof(ip_str));
-    memset(&static_ip, 0, sizeof(whd_network_static_ip_addr_t));
-
-    ssid.length = strlen(SOFTAP_SSID);
-    memcpy(ssid.value, SOFTAP_SSID, ssid.length + 1);
-
-    static_ip.gateway.ip.v4 = ap_ip_settings.gateway.ip.v4;
-    static_ip.addr.ip.v4    = ap_ip_settings.addr.ip.v4;
-    static_ip.netmask.ip.v4 = ap_ip_settings.netmask.ip.v4;
-
-    /* Add channel info */
-    chanspec = ((chanspec << 8) | channel);
-
-    /* set up the AP info */
-    res = whd_wifi_init_ap(whd_ifs[CY_NET_INTERFACE_TYPE_AP], &ssid, ap_security, (const uint8_t *)key,
-                          keylen, chanspec);
-
-    if (res != CY_RSLT_SUCCESS)
-    {
-        if(res == WHD_UNSUPPORTED || res == WHD_WEP_NOT_ALLOWED)
-        {
-            return res;
-        }
-    }
-
-    PRINTF("\n***** Starting '%s' AP ***** \n", SOFTAP_SSID);
-
-    res = whd_wifi_start_ap(whd_ifs[CY_NET_INTERFACE_TYPE_AP]);
-    if (res == CY_RSLT_SUCCESS)
-    {
-        res = whd_network_up(whd_ifs[CY_NET_INTERFACE_TYPE_AP], CY_NET_INTERFACE_TYPE_AP, &static_ip, &nw_if_ctx);
-    }
-    else
-    {
-        PRINTF("Start AP failed %ld\n" ,res);
-        whd_wifi_stop_ap(whd_ifs[CY_NET_INTERFACE_TYPE_AP]);
-        return res;
-    }
-    if(res == CY_RSLT_SUCCESS)
-    {
-        /* Get IPV4 address for AP */
-        res = whd_network_get_ip_address(nw_if_ctx, &ipv4_addr);
-    }
-    else
-    {
-         PRINTF("Failed to bring up AP network\n");
-         return res;
-    }
-    if(res == CY_RSLT_SUCCESS)
-    {
-        whd_nw_ntoa(&ipv4_addr, ip_str);
-        PRINTF("IP Address %s assigned\n", ip_str);
-    }
-    else
-    {
-        PRINTF("\nFailed to get the IP address\n");
-        return res;
-    }
-    return res;
-}
-#else
-
-int mbedtls_hardware_poll(void *data, unsigned char *output, size_t len, size_t *olen)
-{
-	cy_time_t seed;
-	cy_rtos_get_time(&seed);
-
-	srand(seed);
-
-	 *olen = 0;
-
-	    for (size_t i = 0; i < len; i++) {
-            output[i] = rand() % seed;
-	    }
-	    *olen = len;
-	    return 0;
-}
-
-cy_rslt_t wifi_connect(void)
-{
-    whd_network_static_ip_addr_t static_ip;
-    whd_nw_ip_address_t gateway_ipv4_addr;
-    whd_nw_ip_address_t ipv4_addr;
-    whd_network_interface_context *nw_if_ctx;
-    whd_net_ip_address_t gateway_addr;
-    uint32_t elapsed_time_ms;
-
-    char ip_str[15];
-    whd_ssid_t ssid;
-    uint8_t *key = WIFI_PASSWORD;
-    uint8_t keylen = strlen(WIFI_PASSWORD);
-    whd_security_t security = WIFI_SECURITY;
-
-    memset(ip_str, 0, sizeof(ip_str));
-
-    ssid.length = strlen(WIFI_SSID);
-    memcpy(ssid.value, WIFI_SSID, ssid.length + 1);
-
+    cy_command_console_cfg_t console_cfg;
     cy_rslt_t result = CY_RSLT_SUCCESS;
 
-    for(int i=1; i<= CONNECT_RETRY_COUNT; i++)
-    {
-        PRINTF("Connecting to %s, Attempt %d/%d\n", ssid.value, i, CONNECT_RETRY_COUNT);
-		if(security == WHD_SECURITY_WPA3_SAE)
-		{
-			result = wpa3_supplicant_sae_start(ssid.value, ssid.length, key, keylen);
-			if(result != CY_RSLT_SUCCESS)
-			{
-				PRINTF("SAE Failed\n");
-				continue;
-			}
-			else
-			{
-				PRINTF("SAE successful\n");
-			}
-		}
+    PRINTF("executing command_console_add_remove_command \n");
+    console_cfg.serial = (void *)NULL;
+    console_cfg.line_len = sizeof(command_buffer);
+    console_cfg.buffer = command_buffer;
+    console_cfg.history_len = CONSOLE_COMMAND_HISTORY_LENGTH;
+    console_cfg.history_buffer_ptr = command_history_buffer;
+    console_cfg.delimiter_string = console_delimiter_string;
+    console_cfg.params_num = CONSOLE_COMMAND_MAX_PARAMS;
+    console_cfg.thread_priority = CONSOLE_THREAD_PRIORITY;
 
-        result = whd_wifi_join(whd_ifs[CY_NET_INTERFACE_TYPE_STA] , &ssid, security, key, keylen);
-        if(result == CY_RSLT_SUCCESS)
-            break;
-        else if(i!=CONNECT_RETRY_COUNT)
-        {
-            PRINTF("Join failed, retrying...\n");
-        }
-        else
-        {
-            PRINTF("Connect failed, exceeded maximum retries\n");
-        }
-    }
-
-    if(result == CY_RSLT_SUCCESS)
-    {
-        PRINTF("\nJoined %s successfully\n", ssid.value);
-        cy_rtos_delay_milliseconds(2000);
-        result = whd_network_ip_assign(whd_ifs[CY_NET_INTERFACE_TYPE_STA], &nw_if_ctx);
-    }
-    else
-    {
-        PRINTF("Failed to join %s\n", ssid.value);
-        return result;
-    }
-    if(result == CY_RSLT_SUCCESS)
-    {
-        /* Get IPV4 address for STA */
-        result = whd_network_get_ip_address(nw_if_ctx, &ipv4_addr);
-    }
-    else
-    {
-         PRINTF("Failed to gain IP address\n");
-         return result;
-    }
-    if(result == CY_RSLT_SUCCESS)
-    {
-        whd_nw_ntoa(&ipv4_addr, ip_str);
-        PRINTF("IP Address %s assigned\n", ip_str);
-        result = whd_network_get_gateway_ip_address(nw_if_ctx, &gateway_ipv4_addr);
-    }
-    else
-    {
-        PRINTF("Failed to fetch IP address\n");
-        return result;
-    }
+    /* Initialize command console library */
+    result = cy_command_console_init(&console_cfg);
     if (result != CY_RSLT_SUCCESS)
     {
-        PRINTF("Failed to get Gateway IP address: %ld \n", result);
-    }
-    else
-    {
-        whd_nw_ntoa(&gateway_ipv4_addr, ip_str);
-        PRINTF("Gateway Address %s assigned\n", ip_str);
+        PRINTF("Error in initializing command console library : %ld \n", (long)result);
+		return result;
     }
 
-    while(true)
+	/* Initialize Wi-Fi utility and add Wi-Fi commands */
+    result = wifi_utility_init();
+    if ( result != CY_RSLT_SUCCESS )
     {
-        result = whd_network_ping((void *)nw_if_ctx, &gateway_ipv4_addr, 3000, &elapsed_time_ms);
-        if (result == CY_RSLT_SUCCESS)
-        {
-            PRINTF("Ping Successful. Time elapsed = %lu ms\n", elapsed_time_ms);
-        }
-        else
-            PRINTF("Ping failed %ld\n", result);
+        PRINTF("Error in initializing Wi-Fi utility : %ld \n", (long)result);
+        return result;
     }
+
+#ifdef WHD_USE_WCM
+#ifdef ENABLE_SIGMA_TOOL
+    /* Initialize SigmaDUT library */
+    result = cywifi_init_sigmadut();
+    if ( result != CY_RSLT_SUCCESS )
+    {
+       PRINTF("Error in initializing Sigma library : %ld \n", (long)result);
+    }
+#endif /* ENABLE_SIGMA_TOOL */
+
+    /* Initialize IPERF utility and add IPERF commands */
+	//iperf_utility_init(&wcm_config.interface);
+#endif /* WHD_USE_WCM */
+
+    return CY_RSLT_SUCCESS;
 }
-#endif
 
-static void wifi_task(void *arg)
+void console_task(void *param)
 {
-    PRINTF("====================================================\n");
-
     cy_rslt_t result = CY_RSLT_SUCCESS;
 
-    whd_network_init();
-
-    result = whd_custom_wifi_init(
-#ifdef SAP
-    &whd_ifs[CY_NET_INTERFACE_TYPE_AP]
-#else
-    &whd_ifs[CY_NET_INTERFACE_TYPE_STA]
-#endif
-    );
-
-    if(result == CY_RSLT_SUCCESS)
+#ifdef WHD_USE_WCM
+	result = cy_wcm_init(&wcm_config);
+    if (CY_RSLT_SUCCESS != result)
     {
-        PRINTF("\nIMXRT WIFI ON\n");
-#ifdef SAP
-        StartSoftAP();
-        while(1)
-        {
-            vTaskDelay(500);
-        }
-#else
-        wifi_connect();
-#endif
+        PRINTF("WCM initialization failed !! Result: %ld(0x%lx)\n", result, result);
+		return;
     }
+#else
+	whd_network_init();
+	if(whd_interface_type != CY_NET_INTERFACE_TYPE_AP_STA)
+    {
+	    if (CY_RSLT_SUCCESS != whd_custom_wifi_init(&whd_ifs[whd_interface_type]))
+        {
+            PRINTF("Failed to initialize Wi-Fi module !!\n");
+            return;
+        }
+	}
     else
-        PRINTF("wifi init failed %ld\n", result);
+    {
+		/* In concurrent mode primary interface would be STA and secondary AP*/
+        if (CY_RSLT_SUCCESS != whd_custom_wifi_init(&whd_ifs[CY_NET_INTERFACE_TYPE_AP_STA]))
+        {
+            PRINTF("Error in initializing primary interface !!\n");
+            return;
+        }
+
+        /* SoftAP is the secondary interface in Concurrent mode*/
+        if (CY_RSLT_SUCCESS != whd_custom_wifi_init_secondary(&whd_ifs[CY_NET_INTERFACE_TYPE_AP]))
+        {
+            PRINTF("Error in initializing secondary interface !!\n");
+            return;
+        }
+    }
+#endif /* WHD_USE_WCM */
+    command_console_add_command();
+
+    while (1)
+    {
+        vTaskDelay(500);
+    }
 }
+
+TaskHandle_t console_task_handler;
+__attribute__((aligned(8))) uint8_t console_app_stack[CONSOLE_TASK_STACK_SIZE] = {0};
+cy_thread_t app_thread;
 
 int main(void)
 {
-    cy_rslt_t result;
-    (void)result;
     BOARD_ConfigMPU();
     BOARD_InitBootPins();
     BOARD_InitPinsM2();
     BOARD_InitBootClocks();
     BOARD_InitDebugConsole();
     PRINTF("====================================================\n");
-    PRINTF("\t\tIMXRT1170 H1 A1 Test\n");
-    cy_rtos_create_thread(&app_thread, wifi_task, "App_Task", wifi_app_stack, WIFI_TASK_STACK_SIZE, CY_RTOS_PRIORITY_BELOWNORMAL, NULL);
+    PRINTF("\tIMXRT1170 H1A1 Wifi/Cert Test App\n");
+    PRINTF("====================================================\n");
 
+    xTaskCreate(console_task, "console", CONSOLE_TASK_STACK_SIZE, "console", CONSOLE_TASK_PRIORITY, NULL);
+	/* Start the FreeRTOS scheduler */
     vTaskStartScheduler();
 
-     return 0;
+	return 0;
 }
-#endif /* WHD_CUSTOM_HAL && IMXRT */
+
+#endif /* defined(IMXRT) */

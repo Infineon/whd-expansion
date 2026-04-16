@@ -52,6 +52,7 @@
 #include "lwip/icmp.h"
 #include "lwip/inet.h"
 #include "lwip/netdb.h"
+#include "lwip/sockets.h"
 
 #include "whd_network_mw_core.h"
 #include "whd_lwip_dhcp_server.h"
@@ -77,9 +78,52 @@ int errno;
 /******************************************************
  *                      Macros
  ******************************************************/
+#define IPV4_MAX_STR_LEN 15
+
+#define EAPOL_PACKET_TYPE                        (0x888E)
+
+#define MULTICAST_IP_TO_MAC(ip)                  {   (uint8_t) 0x01,             \
+                                                     (uint8_t) 0x00,             \
+                                                     (uint8_t) 0x5e,             \
+                                                     (uint8_t) ((ip)[1] & 0x7F), \
+                                                     (uint8_t) (ip)[2],          \
+                                                     (uint8_t) (ip)[3]           \
+                                                 }
+
+#define IPV6_MULTICAST_TO_MAC_PREFIX             (0x33)
+
+#define ARP_WAIT_TIME_IN_MSEC                    (30000)
+#define ARP_CACHE_CHECK_INTERVAL_IN_MSEC         (5)
+
+#define DHCP_IP_ADDRESS_RESOLUTION_TIMEOUT_IN_MS (15000)
+#ifndef AUTO_IP_ADDRESS_RESOLUTION_TIMEOUT_IN_MS
+#define AUTO_IP_ADDRESS_RESOLUTION_TIMEOUT_IN_MS (60000 * 10)
+#endif
+#define DCHP_RENEWAL_DELAY_IN_MS                 (100)
+#define DHCP_STOP_DELAY_IN_MS                    (400)
 /**
- * Suppress unused variable warning
+ * Maximum number of interface instances supported
  */
+#define CY_IFACE_MAX_HANDLE                      (4U)
+
+#define MAX_AUTO_IP_RETRIES                      (5)
+
+#ifdef COMPONENT_4390X
+#define CY_PRNG_SEED_FEEDBACK_MAX_LOOPS          (1000)
+#define CY_PRNG_CRC32_POLYNOMIAL                 (0xEDB88320)
+#define CY_PRNG_ADD_CYCLECNT_ENTROPY_EACH_N_BYTE (1024)
+#define CY_PRNG_WELL512_STATE_SIZE               (16)
+#endif
+
+/* Ping definitions*/
+#define PING_DATA_SIZE                           (64)
+#define PING_IF_NAME_LEN                         (6)
+#define PING_RESPONSE_LEN                        (64)
+#define PING_ID                                  (0xAFAF)  /** ICMP identifier for ping */
+
+#define MAX_ETHERNET_PORT                        (2U)
+#define ETH_INTERFACE_INDEX                      (2U)
+
 
 static bool is_sta_network_up          = false;
 static bool is_ap_network_up           = false;
@@ -184,6 +228,81 @@ cy_rslt_t cy_prng_add_entropy( const void* buffer, uint32_t buffer_length );
 
 #if defined(CYBSP_WIFI_CAPABLE)
 
+#if LWIP_IPV4
+int whd_nw_str_to_ipv4(const char *ip_str, whd_nw_ip_address_t *address)
+{
+    ip4_addr_t addr;
+    if (ip_str == NULL || address == NULL)
+    {
+        return -1;
+    }
+
+    if (ip4addr_aton(ip_str, &addr))
+    {
+        address->ip.v4 = addr.addr;
+        address->version = NW_IP_IPV4;
+        return 0;
+    }
+    return -1;
+}
+#endif /* LWIP_IPV4 */
+
+bool whd_nw_aton(const char *char_ptr , whd_nw_ip_address_t *addr)
+{
+    uint8_t byte = 0;
+    uint8_t byte_cnt = 1;
+    uint32_t ip_addr = 0;
+    char ch;
+
+    if(char_ptr == NULL || addr == NULL)
+    {
+        return 1;
+    }
+
+    while(*char_ptr != '\0' || byte_cnt <= 4)
+    {
+        ch = *char_ptr;
+        if(ch == '.' || ch == '\0')
+        {
+            if(byte_cnt == 1 && ch == '.')
+            {
+                ip_addr = ip_addr | (uint32_t)byte;
+            }
+            else if(byte_cnt == 2 && ch == '.')
+            {
+                ip_addr = ip_addr | (((uint32_t)byte) << 8);
+            }
+            else if(byte_cnt == 3 && ch == '.')
+            {
+                ip_addr = ip_addr | (((uint32_t)byte) << 16);
+            }
+            else if(byte_cnt == 4 && ch == '\0')
+            {
+                ip_addr = ip_addr | (((uint32_t)byte) << 24);
+                break;
+            }
+            else
+            {
+                break;
+            }
+            byte = 0;
+            byte_cnt++;
+            char_ptr++;
+            continue;
+        }
+        byte = (byte * 10) + (ch - '0');
+        char_ptr++;
+    }
+    if(byte_cnt < 4)
+    {
+        return 1;
+    }
+    addr->version = NW_IP_IPV4;
+    addr->ip.v4 = ip_addr;
+
+    return 0;
+}
+
 bool whd_nw_ntoa (whd_nw_ip_address_t *addr, char *ip_str)
 {
     uint8_t index = 0;
@@ -200,7 +319,7 @@ bool whd_nw_ntoa (whd_nw_ip_address_t *addr, char *ip_str)
         ip_addr = ip_addr >> 8;
         index++;
     }
-    memset(ip_str,0, (15*sizeof(char)));
+    memset(ip_str,0, (IPV4_MAX_STR_LEN*sizeof(char)));
     sprintf(ip_str, "%d.%d.%d.%d", arr[0],arr[1],arr[2],arr[3]);
     return 0;
 }
@@ -684,7 +803,6 @@ cy_rslt_t whd_network_add_nw_interface(whd_network_hw_interface_type_t iface_typ
         WPRINT_WHD_INFO(("static_ipaddr is NOT NULL \n"));
 
 #ifdef WPRINT_ENABLE_WHD_INFO
-#define IPV4_MAX_STR_LEN 15
     char ip_str[IPV4_MAX_STR_LEN];
     whd_nw_ntoa(&(static_ipaddr->addr), ip_str);
     WPRINT_WHD_INFO(("static ipaddr assigned %s assigned \n", ip_str));
@@ -1221,6 +1339,34 @@ void whd_network_activity_register_cb(whd_network_activity_event_callback_t cb)
 }
 
 /*
+ * This function notifies the network activity to the LPA module.
+ */
+cy_rslt_t whd_network_activity_notify(whd_network_activity_type_t activity_type)
+{
+
+    if(activity_callback)
+    {
+        WPRINT_WHD_DEBUG(("%s(): START \n", __FUNCTION__ ));
+        if(activity_type == CY_NETWORK_ACTIVITY_TX)
+        {
+            activity_callback(true);
+        }
+        else if(activity_type == CY_NETWORK_ACTIVITY_RX)
+        {
+            activity_callback(false);
+        }
+        else
+        {
+            WPRINT_WHD_ERROR(("Invalid network activity type\n"));
+            return CY_RSLT_NETWORK_BAD_ARG;
+        }
+        WPRINT_WHD_DEBUG(("%s(): END \n", __FUNCTION__ ));
+    }
+
+    return CY_RSLT_SUCCESS;
+}
+
+/*
  * This function requests for an IP address from DHCP server of the AP after connection
  */
 cy_rslt_t whd_network_get_ip_address(whd_network_interface_context *iface_context, whd_nw_ip_address_t *ip_addr)
@@ -1236,7 +1382,7 @@ cy_rslt_t whd_network_get_ip_address(whd_network_interface_context *iface_contex
 
     if((ip_addr == NULL) || (is_interface_valid(iface_context) != CY_RSLT_SUCCESS))
     {
-        WPRINT_WHD_ERROR(("%s: Invalid arguments \n", __func__));
+        WPRINT_WHD_ERROR(("Invalid arguments \n"));
         return CY_RSLT_NETWORK_BAD_ARG;
     }
 
@@ -1810,7 +1956,7 @@ cy_rslt_t whd_network_up(whd_interface_t interface, whd_network_hw_interface_typ
 cy_rslt_t whd_network_ip_assign(whd_interface_t interface, whd_network_interface_context **nw_sta_ifx_ctx)
 {
 	cy_rslt_t res = CY_RSLT_SUCCESS;
-    whd_network_static_ip_addr_t  *static_ip_ptr;
+    whd_network_static_ip_addr_t static_ip, *static_ip_ptr;
     static_ip_ptr = NULL;
     uint32_t retry_count = 0;
     whd_nw_ip_address_t ipv4_addr;
@@ -1835,8 +1981,11 @@ cy_rslt_t whd_network_ip_assign(whd_interface_t interface, whd_network_interface
             whd_nw_ntoa(&ipv4_addr, ip_str);
             WPRINT_WHD_INFO(("IPV4 Address %s assigned \n", ip_str));
 #endif
-            ip_addr.version = CY_NET_IP_VER_V4;
-            ip_addr.ip.v4 = ipv4_addr.ip.v4;
+            if(&ip_addr != NULL)
+            {
+                ip_addr.version = CY_NET_IP_VER_V4;
+                ip_addr.ip.v4 = ipv4_addr.ip.v4;
+            }
             break;
         }
         // TO DO : get ipv6 address
@@ -2025,4 +2174,29 @@ cy_rslt_t cy_prng_add_entropy( const void* buffer, uint32_t buffer_length )
 }
 #endif
 
-#endif /* WHD_NETWORK */
+#ifdef IMXRT
+/*
+ * This is a pseudo random number generator for being used by the mbedtls library
+ * Ideally, platform specific TRNG functionality should be used for this purpose
+ * If the platform SDK or source provides such a functionality, please use that
+ * instead of the below function
+ */
+int mbedtls_hardware_poll(void *data, unsigned char *output, size_t len, size_t *olen)
+{
+    cy_time_t seed;
+    cy_rtos_get_time(&seed);
+
+    srand(seed);
+
+    *olen = 0;
+
+    for (size_t i = 0; i < len; i++)
+    {
+        output[i] = rand() % seed;
+    }
+        *olen = len;
+        return 0;
+}
+#endif /* IMXRT */
+
+#endif /* WHD_NETWORK_LWIP */

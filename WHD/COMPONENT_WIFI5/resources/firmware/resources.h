@@ -39,9 +39,9 @@ RESOURCE_BIN_ADD(".rodata", FW_IMAGE_NAME, wifi_firmware_image_data, wifi_firmwa
 #endif
 #endif
 #ifndef DM_43022C1
-const resource_hnd_t wifi_firmware_image = { RESOURCE_IN_MEMORY, FW_IMAGE_SIZE, {.mem = { (const char *) wifi_firmware_image_data }}};
+const resource_hnd_t wifi_firmware_image = { RESOURCE_IN_MEMORY, (unsigned long)FW_IMAGE_SIZE, {.mem = { (const char *) wifi_firmware_image_data }}};
 #else
-const resource_hnd_t wifi_firmware_image = { RESOURCE_IN_MEMORY, (FW_IMAGE_SIZE - sizeof(trx_header_t)), {.mem = { (const char *) &wifi_firmware_image_data[sizeof(trx_header_t)] }}};
+const resource_hnd_t wifi_firmware_image = { RESOURCE_IN_MEMORY, ((unsigned long)FW_IMAGE_SIZE - sizeof(trx_header_t)), {.mem = { (const char *) &wifi_firmware_image_data[sizeof(trx_header_t)] }}};
 #endif /* DM_43022C1 */
 #endif /* ifndef RESOURCE_READ_FROM_C_FILE */
 

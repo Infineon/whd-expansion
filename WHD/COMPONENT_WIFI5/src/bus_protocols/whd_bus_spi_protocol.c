@@ -31,8 +31,9 @@
 
 #include "cy_result.h"
 #include "cyabs_rtos.h"
+#ifndef WHD_USE_CUSTOM_HAL_IMPL
 #include "cyhal_gpio.h"
-
+#endif /* WHD_USE_CUSTOM_HAL_IMPL */
 #include "whd_thread.h"
 #include "whd_chip.h"
 #include "whd_sdpcm.h"
@@ -137,7 +138,11 @@ static const uint8_t whd_bus_gspi_command_mapping[] = { 0, 1 };
 struct whd_bus_priv
 {
     whd_spi_config_t spi_config;
+#ifndef WHD_USE_CUSTOM_HAL_IMPL
     cyhal_spi_t *spi_obj;
+#else
+    whd_spi_t *spi_obj;
+#endif
 };
 
 /******************************************************
@@ -151,17 +156,26 @@ struct whd_bus_priv
 static whd_result_t whd_spi_download_firmware(whd_driver_t whd_driver);
 static whd_result_t whd_bus_spi_transfer_buffer(whd_driver_t whd_driver, whd_bus_transfer_direction_t direction,
                                                 whd_bus_function_t function, uint32_t address, whd_buffer_t buffer);
+#ifdef BLHS_SUPPORT
 static whd_result_t whd_bus_spi_blhs(whd_driver_t whd_driver, whd_bus_blhs_stage_t stage);
+#endif
 static whd_result_t whd_bus_spi_download_resource(whd_driver_t whd_driver, whd_resource_type_t resource,
                                                   whd_bool_t direct_resource, uint32_t address, uint32_t image_size);
 static whd_result_t whd_bus_spi_write_wifi_nvram_image(whd_driver_t whd_driver);
 static whd_result_t whd_bus_spi_set_backplane_window(whd_driver_t whd_driver, uint32_t addr, uint32_t *curbase);
+
+whd_result_t whd_bus_spi_transfer(whd_driver_t whd_driver, const uint8_t *tx, size_t tx_length, uint8_t *rx,
+                                  size_t rx_length, uint8_t write_fill);
+
 /******************************************************
 *             Global Function definitions
 ******************************************************/
 uint32_t whd_bus_spi_bt_packet_available_to_read(whd_driver_t whd_driver);
-
+#ifndef WHD_USE_CUSTOM_HAL_IMPL
 whd_result_t whd_bus_spi_attach(whd_driver_t whd_driver, whd_spi_config_t *whd_spi_config, cyhal_spi_t *spi_obj)
+#else
+whd_result_t whd_bus_spi_attach(whd_driver_t whd_driver, whd_spi_config_t *whd_spi_config, whd_spi_t *spi_obj)
+#endif
 {
     struct whd_bus_info *whd_bus_info;
 
@@ -171,8 +185,11 @@ whd_result_t whd_bus_spi_attach(whd_driver_t whd_driver, whd_spi_config_t *whd_s
                            __func__, __LINE__) );
         return WHD_WLAN_BADARG;
     }
-
+#ifndef WHD_USE_CUSTOM_HAL_IMPL
     if (whd_spi_config->oob_config.host_oob_pin == CYHAL_NC_PIN_VALUE)
+#else
+    if (whd_spi_config->oob_config.host_oob_pin == WHD_NC_PIN_VALUE)
+#endif
     {
         WPRINT_WHD_ERROR( ("OOB interrupt pin argument must be provided in %s\n", __FUNCTION__) );
         return WHD_BADARG;
@@ -237,7 +254,9 @@ whd_result_t whd_bus_spi_attach(whd_driver_t whd_driver, whd_spi_config_t *whd_s
     whd_bus_info->whd_bus_reinit_stats_fptr = whd_bus_spi_reinit_stats;
     whd_bus_info->whd_bus_irq_register_fptr = whd_bus_spi_irq_register;
     whd_bus_info->whd_bus_irq_enable_fptr = whd_bus_spi_irq_enable;
+#ifdef BLHS_SUPPORT
     whd_bus_info->whd_bus_blhs_fptr = whd_bus_spi_blhs;
+#endif
     whd_bus_info->whd_bus_download_resource_fptr = whd_bus_spi_download_resource;
     whd_bus_info->whd_bus_set_backplane_window_fptr = whd_bus_spi_set_backplane_window;
 
@@ -257,6 +276,15 @@ void whd_bus_spi_detach(whd_driver_t whd_driver)
         whd_driver->bus_priv = NULL;
     }
 }
+
+#ifndef WHD_USE_CUSTOM_HAL_IMPL
+whd_result_t whd_bus_spi_transfer(whd_driver_t whd_driver, const uint8_t *tx, size_t tx_length, uint8_t *rx, size_t rx_length,
+                             uint8_t write_fill)
+{
+    return cyhal_spi_transfer(whd_driver->bus_priv->spi_obj, tx, tx_length, rx, rx_length, write_fill);
+}
+#endif /* ifndef WHD_USE_CUSTOM_HAL_IMPL */
+
 
 whd_result_t whd_bus_spi_send_buffer(whd_driver_t whd_driver, whd_buffer_t buffer)
 {
@@ -357,16 +385,26 @@ static whd_result_t whd_bus_spi_transfer_buffer(whd_driver_t whd_driver, whd_bus
     /* Send the data */
     if (direction == BUS_READ)
     {
+#ifndef WHD_USE_CUSTOM_HAL_IMPL
         result =  cyhal_spi_transfer(whd_driver->bus_priv->spi_obj, NULL,
                                      sizeof(whd_bus_gspi_header_t),
                                      (uint8_t *)gspi_header,
                                      transfer_size, 0);
-
+#else
+        result =  whd_bus_spi_transfer(whd_driver, NULL,
+                                     sizeof(whd_bus_gspi_header_t),
+                                     (uint8_t *)gspi_header,
+                                     transfer_size, 0);
+#endif
     }
     else
     {
+#ifndef WHD_USE_CUSTOM_HAL_IMPL
         result = cyhal_spi_transfer(whd_driver->bus_priv->spi_obj, (uint8_t *)gspi_header, transfer_size, NULL,
                                     0, 0);
+#else
+        result = whd_bus_spi_transfer(whd_driver, (uint8_t *)gspi_header, transfer_size, NULL, 0, 0);
+#endif
     }
 
     return result;
@@ -590,8 +628,13 @@ whd_result_t whd_bus_spi_init(whd_driver_t whd_driver)
                                                                 (uint32_t)( (SPI_READ_TEST_REGISTER & 0x1FFFFu) <<
                                                                             11 ) |
                                                                 (uint32_t)( (4u /*size*/ & 0x7FFu) << 0 ) ) );
+#ifndef WHD_USE_CUSTOM_HAL_IMPL
         CHECK_RETURN(cyhal_spi_transfer(whd_driver->bus_priv->spi_obj, NULL, sizeof(whd_bus_gspi_header_t),
                                         init_data, transfer_size, 0) );
+#else
+        CHECK_RETURN(whd_bus_spi_transfer(whd_driver, NULL, sizeof(whd_bus_gspi_header_t),
+                                        init_data, transfer_size, 0) );
+#endif
         loop_count++;
     } while ( (NULL == memchr(&init_data[4], SPI_READ_TEST_REG_LSB, (size_t)8) ) &&
               (NULL == memchr(&init_data[4], SPI_READ_TEST_REG_LSB_SFT1, (size_t)8) ) &&
@@ -1003,15 +1046,25 @@ whd_result_t whd_bus_spi_transfer_bytes(whd_driver_t whd_driver, whd_bus_transfe
     /* Send the data */
     if (direction == BUS_READ)
     {
+#ifndef WHD_USE_CUSTOM_HAL_IMPL
         result = cyhal_spi_transfer(whd_driver->bus_priv->spi_obj, NULL,
                                     sizeof(whd_bus_gspi_header_t),
                                     (uint8_t *)gspi_header,
                                     transfer_size, 0);
+#else
+        result = whd_bus_spi_transfer(whd_driver, NULL, sizeof(whd_bus_gspi_header_t),
+                                    (uint8_t *)gspi_header,transfer_size, 0);
+#endif
     }
     else
     {
+#ifndef WHD_USE_CUSTOM_HAL_IMPL
         result = cyhal_spi_transfer(whd_driver->bus_priv->spi_obj, (uint8_t *)gspi_header, transfer_size, NULL,
                                     0, 0);
+#else
+        result = whd_bus_spi_transfer(whd_driver, (uint8_t *)gspi_header,
+                                      transfer_size, NULL,0, 0);
+#endif
     }
 
     CHECK_RETURN(result);
@@ -1152,11 +1205,12 @@ uint32_t whd_bus_spi_get_max_transfer_size(whd_driver_t whd_driver)
     return WHD_BUS_SPI_MAX_BACKPLANE_TRANSFER_SIZE;
 }
 
+#ifndef WHD_USE_CUSTOM_HAL_IMPL
 #if (CYHAL_API_VERSION >= 2)
 static void whd_bus_spi_oob_irq_handler(void *arg, cyhal_gpio_event_t event)
 #else
 static void whd_bus_spi_oob_irq_handler(void *arg, cyhal_gpio_irq_event_t event)
-#endif
+#endif /* (CYHAL_API_VERSION >= 2) */
 {
     whd_driver_t whd_driver = (whd_driver_t)arg;
     const whd_oob_config_t *config = &whd_driver->bus_priv->spi_config.oob_config;
@@ -1166,7 +1220,7 @@ static void whd_bus_spi_oob_irq_handler(void *arg, cyhal_gpio_irq_event_t event)
 #else
     const cyhal_gpio_irq_event_t expected_event = (config->is_falling_edge == WHD_TRUE)
                                                   ? CYHAL_GPIO_IRQ_FALL : CYHAL_GPIO_IRQ_RISE;
-#endif
+#endif /* (CYHAL_API_VERSION >= 2) */
     if (event != expected_event)
     {
         WPRINT_WHD_ERROR( ("Unexpected interrupt event %d\n", event) );
@@ -1194,7 +1248,7 @@ whd_result_t whd_bus_spi_irq_register(whd_driver_t whd_driver)
 #else
     cyhal_gpio_register_irq(config->host_oob_pin, WLAN_INTR_PRIORITY, whd_bus_spi_oob_irq_handler,
                             whd_driver);
-#endif
+#endif /* (CYHAL_API_VERSION >= 2) */
     return WHD_TRUE;
 }
 
@@ -1211,14 +1265,17 @@ whd_result_t whd_bus_spi_irq_enable(whd_driver_t whd_driver, whd_bool_t enable)
         (config->is_falling_edge == WHD_TRUE) ? CYHAL_GPIO_IRQ_FALL : CYHAL_GPIO_IRQ_RISE;
 
     cyhal_gpio_irq_enable(config->host_oob_pin, event, (enable == WHD_TRUE) ? true : false);
-#endif
+#endif /* (CYHAL_API_VERSION >= 2) */
     return WHD_TRUE;
 }
+#endif /* ifndef WHD_USE_CUSTOM_HAL_IMPL */
 
+#ifdef BLHS_SUPPORT
 static whd_result_t whd_bus_spi_blhs(whd_driver_t whd_driver, whd_bus_blhs_stage_t stage)
 {
     return WHD_SUCCESS;
 }
+#endif
 
 static whd_result_t whd_bus_spi_download_resource(whd_driver_t whd_driver, whd_resource_type_t resource,
                                                   whd_bool_t direct_resource, uint32_t address, uint32_t image_size)

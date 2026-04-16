@@ -135,6 +135,9 @@ typedef struct whd_nw_ip_address
         uint32_t v6[4];      /**< IPv6 address info */
     } ip;                    /**< Union of IPv4 and IPv6 address info */
 } whd_nw_ip_address_t;
+#ifdef WHD_USE_WCM
+#define cy_nw_ip_address_t whd_nw_ip_address_t
+#endif /* WHD_USE_WCM */
 
 /** Network interface object */
 typedef void* whd_network_interface_object_t;
@@ -144,6 +147,9 @@ typedef struct whd_nw_ip_mac
 {
     uint8_t    mac[6];              /**< MAC address                */
 } whd_nw_ip_mac_t;
+#ifdef WHD_USE_WCM
+#define cy_nw_ip_mac_t whd_nw_ip_mac_t
+#endif /* WHD_USE_WCM */
 
 /** ARP Cache Entry info */
 typedef struct whd_nw_arp_cache_entry
@@ -174,6 +180,37 @@ typedef struct
  */
 /*****************************************************************************/
 
+#if LWIP_IPV4
+/**
+ * Convert IPv4 string to an IP address structure.
+ *
+ * @param[in]  ip_str  :  IPv4 address string.
+ * @param[out] address :  Pointer to the IP info structure in which the IPv4 address to be stored
+ *
+ * @return    0 : if successful
+ * @return   -1 : if failed
+ */
+int whd_nw_str_to_ipv4(const char *ip_str, whd_nw_ip_address_t *address);
+#ifdef WHD_USE_WCM
+#define cy_nw_str_to_ipv4 whd_nw_str_to_ipv4
+#endif /* WHD_USE_WCM */
+#endif /* LWIP_IPV4 */
+
+/** GET IPv4 address in decimal notation.
+ *
+ * NOTE: dotted-decimal notation example (192.168.0.1)
+ *
+ * @param[in]  char_ptr : Pointer to the string containing the IPv4 address in dotted-decimal format.
+ * @param[out] addr     : Pointer to the structure containing IPv4 address in decimal format.
+ *
+ * @return 0 : success
+ *         1 : failed
+ * */
+bool whd_nw_aton (const char *char_ptr , whd_nw_ip_address_t *addr);
+#ifdef WHD_USE_WCM
+#define cy_nw_aton whd_nw_aton
+#endif /* WHD_USE_WCM */
+
 /** GET IPv4 address in string format.
  *
  * @param[in]  addr     : Pointer to IPv4 address structure containing the IPv4 address.
@@ -182,13 +219,10 @@ typedef struct
  * @return 0 : success
  *         1 : failed
  * */
-#define INITIALISER_IPV4_ADDRESS(addr_var, addr_val)  addr_var = { CY_NET_IP_VER_V4, { .v4 = (uint32_t)(addr_val) } }
-#define MAKE_IPV4_ADDRESS(a, b, c, d)                 ((((uint32_t) d) << 24) | (((uint32_t) c) << 16) | \
-                                                       (((uint32_t) b) << 8) |((uint32_t) a))
-
-#define IP_STR_LEN                       16
-
 bool whd_nw_ntoa (whd_nw_ip_address_t *addr, char *ip_str);
+#ifdef WHD_USE_WCM
+#define cy_nw_ntoa whd_nw_ntoa
+#endif /* WHD_USE_WCM */
 
 /** @} */
 
@@ -196,4 +230,4 @@ bool whd_nw_ntoa (whd_nw_ip_address_t *addr, char *ip_str);
 }
 #endif
 
-#endif
+#endif /* WHD_NETWORK_LWIP */

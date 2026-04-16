@@ -80,8 +80,6 @@ extern "C" {
 
 #define UNUSED_VARIABLE(x) ( (void)(x) )
 
-#define EAPOL_PACKET_TYPE                        (0x888E)
-
 #if !NO_SYS
 #define PROTECTED_FUNC_CALL(func) \
 LOCK_TCPIP_CORE(); \
@@ -91,48 +89,6 @@ UNLOCK_TCPIP_CORE();
 #define PROTECTED_FUNC_CALL(func) \
 func;
 #endif
-
-#define MULTICAST_IP_TO_MAC(ip)                  {   (uint8_t) 0x01,             \
-                                                     (uint8_t) 0x00,             \
-                                                     (uint8_t) 0x5e,             \
-                                                     (uint8_t) ((ip)[1] & 0x7F), \
-                                                     (uint8_t) (ip)[2],          \
-                                                     (uint8_t) (ip)[3]           \
-                                                 }
-
-#define IPV6_MULTICAST_TO_MAC_PREFIX             (0x33)
-
-#define ARP_WAIT_TIME_IN_MSEC                    (30000)
-#define ARP_CACHE_CHECK_INTERVAL_IN_MSEC         (5)
-
-#define DHCP_IP_ADDRESS_RESOLUTION_TIMEOUT_IN_MS (15000)
-#ifndef AUTO_IP_ADDRESS_RESOLUTION_TIMEOUT_IN_MS
-#define AUTO_IP_ADDRESS_RESOLUTION_TIMEOUT_IN_MS (60000 * 10)
-#endif
-#define DCHP_RENEWAL_DELAY_IN_MS                 (100)
-#define DHCP_STOP_DELAY_IN_MS                    (400)
-/**
- * Maximum number of interface instances supported
- */
-#define CY_IFACE_MAX_HANDLE                      (4U)
-
-#define MAX_AUTO_IP_RETRIES                      (5)
-
-#ifdef COMPONENT_4390X
-#define CY_PRNG_SEED_FEEDBACK_MAX_LOOPS          (1000)
-#define CY_PRNG_CRC32_POLYNOMIAL                 (0xEDB88320)
-#define CY_PRNG_ADD_CYCLECNT_ENTROPY_EACH_N_BYTE (1024)
-#define CY_PRNG_WELL512_STATE_SIZE               (16)
-#endif
-
-/* Ping definitions*/
-#define PING_DATA_SIZE                           (64)
-#define PING_IF_NAME_LEN                         (6)
-#define PING_RESPONSE_LEN                        (64)
-#define PING_ID                                  (0xAFAF)  /** ICMP identifier for ping */
-
-#define MAX_ETHERNET_PORT                        (2U)
-#define ETH_INTERFACE_INDEX                      (2U)
 
 #if defined(COMPONENT_CAT1)
 #define MAX_TRNG_BIT_SIZE        (32UL)
@@ -178,6 +134,10 @@ typedef enum
     CY_NETWORK_WIFI_AP_INTERFACE     = 1,  /**< SoftAP interface */
     CY_NETWORK_ETH_INTERFACE         = 2   /**< Ethernet interface */
 } whd_network_hw_interface_type_t;
+#ifdef WHD_USE_WCM
+#define cy_network_hw_interface_type_t whd_network_hw_interface_type_t
+#endif /* WHD_USE_WCM */
+
 /**
  * Enumeration of network activity type
  */
@@ -186,6 +146,9 @@ typedef enum
     CY_NETWORK_ACTIVITY_TX = 0,  /**< Tx network activity  */
     CY_NETWORK_ACTIVITY_RX = 1   /**< Rx network activity  */
 } whd_network_activity_type_t;
+#ifdef WHD_USE_WCM
+#define cy_network_activity_type_t whd_network_activity_type_t
+#endif /* WHD_USE_WCM */
 
 /**
 * IPv6 types
@@ -195,6 +158,9 @@ typedef enum
     CY_NETWORK_IPV6_LINK_LOCAL = 0, /**< IPv6 link-local address type */
     CY_NETWORK_IPV6_GLOBAL          /**< IPv6 global address type */
 } whd_network_ipv6_type_t;
+#ifdef WHD_USE_WCM
+#define cy_network_ipv6_type_t whd_network_ipv6_type_t
+#endif /* WHD_USE_WCM */
 
 /** \} group_lwip_network_interface_integration_enums */
 
@@ -216,6 +182,9 @@ typedef struct
     bool                            is_initialized; /**< Indicates whether the network interface is initialized */
     uint8_t                         mac_address[CY_MAC_ADDR_LEN]; /**< MAC address of the device to be configured to the lwIP stack */
 } whd_network_interface_context;
+#ifdef WHD_USE_WCM
+#define cy_network_interface_context whd_network_interface_context
+#endif /* WHD_USE_WCM */
 
 /**
  * This structure represents a static IP address
@@ -226,6 +195,9 @@ typedef struct whd_network_static_ip_addr
     whd_nw_ip_address_t netmask; /**< Netmask for the network interface */
     whd_nw_ip_address_t gateway; /**< Default gateway for network traffic */
 } whd_network_static_ip_addr_t;
+#ifdef WHD_USE_WCM
+#define cy_network_static_ip_addr_t whd_network_static_ip_addr_t
+#endif /* WHD_USE_WCM */
 
 /** \} group_lwip_network_interface_integration_structures */
 
@@ -234,7 +206,6 @@ typedef struct whd_network_static_ip_addr
 * \{
 */
 
-
 /**
  * Initializes the network stack, and allocates and initializes
  * the resources needed by this library
@@ -242,6 +213,9 @@ typedef struct whd_network_static_ip_addr
  * @return CY_RSLT_SUCCESS if successful; failure code otherwise.
  */
 cy_rslt_t whd_network_init();
+#ifdef WHD_USE_WCM
+#define cy_network_init whd_network_init
+#endif /* WHD_USE_WCM */
 
 /**
  * Deinitializes the network stack, and releases the resources
@@ -269,6 +243,9 @@ cy_rslt_t whd_network_deinit();
 cy_rslt_t whd_network_add_nw_interface(whd_network_hw_interface_type_t iface_type, uint8_t iface_idx,
                                       void *hw_interface, uint8_t *mac_address,
                                       whd_network_static_ip_addr_t *ipaddr, whd_network_interface_context **iface_context);
+#ifdef WHD_USE_WCM
+#define cy_network_add_nw_interface whd_network_add_nw_interface
+#endif /* WHD_USE_WCM */
 
 /**
  * Removes a network interface. Unbinds the network interface from the IP layer of the network stack.
@@ -278,6 +255,9 @@ cy_rslt_t whd_network_add_nw_interface(whd_network_hw_interface_type_t iface_typ
  * @return CY_RSLT_SUCCESS if successful; failure code otherwise.
  */
 cy_rslt_t whd_network_remove_nw_interface(whd_network_interface_context *iface_context);
+#ifdef WHD_USE_WCM
+#define cy_network_remove_nw_interface whd_network_remove_nw_interface
+#endif /* WHD_USE_WCM */
 
 /**
  * Returns the network interface for the given network interface type
@@ -288,6 +268,9 @@ cy_rslt_t whd_network_remove_nw_interface(whd_network_interface_context *iface_c
  * @return Associated network stack's net interface structure for the HW interface
  */
 void* whd_network_get_nw_interface(whd_network_hw_interface_type_t iface_type, uint8_t iface_idx);
+#ifdef WHD_USE_WCM
+#define cy_network_get_nw_interface whd_network_get_nw_interface
+#endif /* WHD_USE_WCM */
 
 /**
  * Brings up the network link layer and
@@ -298,6 +281,9 @@ void* whd_network_get_nw_interface(whd_network_hw_interface_type_t iface_type, u
  *  @return CY_RSLT_SUCCESS on successful network bring up; failure code otherwise.
  */
 cy_rslt_t whd_network_ip_up(whd_network_interface_context *iface_context);
+#ifdef WHD_USE_WCM
+#define cy_network_ip_up whd_network_ip_up
+#endif /* WHD_USE_WCM */
 
 /**
  * Brings down the network interface and network link layer,
@@ -308,6 +294,9 @@ cy_rslt_t whd_network_ip_up(whd_network_interface_context *iface_context);
  * @return CY_RSLT_SUCCESS on successful teardown of the network; failure code otherwise.
  */
 cy_rslt_t whd_network_ip_down(whd_network_interface_context *iface_context);
+#ifdef WHD_USE_WCM
+#define cy_network_ip_down whd_network_ip_down
+#endif /* WHD_USE_WCM */
 
 /**
  * Invalidates all ARP entries and renews DHCP
@@ -317,6 +306,9 @@ cy_rslt_t whd_network_ip_down(whd_network_interface_context *iface_context);
  * @return CY_RSLT_SUCCESS on successful network bring up; failure code otherwise.
  */
 cy_rslt_t whd_network_dhcp_renew(whd_network_interface_context *iface_context);
+#ifdef WHD_USE_WCM
+#define cy_network_dhcp_renew whd_network_dhcp_renew
+#endif /* WHD_USE_WCM */
 
 /**
  * IP change callback function prototype
@@ -338,6 +330,9 @@ typedef void (*whd_network_ip_change_callback_t)(whd_network_interface_context *
  *
  */
 void whd_network_register_ip_change_cb(whd_network_interface_context *iface_context, whd_network_ip_change_callback_t cb, void *user_data);
+#ifdef WHD_USE_WCM
+#define cy_network_register_ip_change_cb whd_network_register_ip_change_cb
+#endif /* WHD_USE_WCM */
 
 /**
  * Network activity callback function prototype.
@@ -356,6 +351,18 @@ typedef void (*whd_network_activity_event_callback_t)(bool event_type);
 void whd_network_activity_register_cb(whd_network_activity_event_callback_t cb);
 
 /**
+ * Notifies the network activity to the Low Power Assistant (LPA) module
+ *
+ * @param[in] activity_type Network activity type \ref whd_network_activity_type_t to be notified to the LPA module
+ *
+ * @return CY_RSLT_SUCCESS if successful; failure code otherwise.
+ */
+cy_rslt_t whd_network_activity_notify(whd_network_activity_type_t activity_type);
+#ifdef WHD_USE_WCM
+#define cy_network_activity_notify whd_network_activity_notify
+#endif /* WHD_USE_WCM */
+
+/**
  * Retrieves the IPv4 address of the given interface. See \ref whd_network_get_ipv6_address API to get IPv6 addresses.
  *
  * @param[in]   iface_context  : Interface context that has been created with the \ref whd_network_add_nw_interface function
@@ -365,6 +372,9 @@ void whd_network_activity_register_cb(whd_network_activity_event_callback_t cb);
 
  */
 cy_rslt_t whd_network_get_ip_address(whd_network_interface_context *iface_context, whd_nw_ip_address_t *ip_addr);
+#ifdef WHD_USE_WCM
+#define cy_network_get_ip_address whd_network_get_ip_address
+#endif /* WHD_USE_WCM */
 
 /**
  * Retrieves the IPv6 address of the given interface
@@ -377,6 +387,9 @@ cy_rslt_t whd_network_get_ip_address(whd_network_interface_context *iface_contex
 
  */
 cy_rslt_t whd_network_get_ipv6_address(whd_network_interface_context *iface_context, whd_network_ipv6_type_t type, whd_nw_ip_address_t *ip_addr);
+#ifdef WHD_USE_WCM
+#define cy_network_get_ipv6_address whd_network_get_ipv6_address
+#endif /* WHD_USE_WCM */
 
 /**
  * Retrieves the gateway IP address of the given interface
@@ -388,6 +401,9 @@ cy_rslt_t whd_network_get_ipv6_address(whd_network_interface_context *iface_cont
 
  */
 cy_rslt_t whd_network_get_gateway_ip_address(whd_network_interface_context *iface_context, whd_nw_ip_address_t *gateway_addr);
+#ifdef WHD_USE_WCM
+#define cy_network_get_gateway_ip_address whd_network_get_gateway_ip_address
+#endif /* WHD_USE_WCM */
 
 /**
  * Retrieves the MAC address of the gateway for the given interface. Uses Address Resolution Protocol (ARP) to retrieve the gateway MAC address.
@@ -400,6 +416,9 @@ cy_rslt_t whd_network_get_gateway_ip_address(whd_network_interface_context *ifac
  * @return CY_RSLT_SUCCESS if retrieval of the gateway MAC address was successful; failure code otherwise.
  */
 cy_rslt_t whd_network_get_gateway_mac_address(whd_network_interface_context *iface_context, whd_nw_ip_mac_t *mac_addr);
+#ifdef WHD_USE_WCM
+#define cy_network_get_gateway_mac_address whd_network_get_gateway_mac_address
+#endif /* WHD_USE_WCM */
 
 /**
  * Retrieves the subnet mask address of the given interface
@@ -410,8 +429,11 @@ cy_rslt_t whd_network_get_gateway_mac_address(whd_network_interface_context *ifa
  * @return CY_RSLT_SUCCESS if retrieval of the subnet mask address was successful; failure code otherwise.
  */
 cy_rslt_t whd_network_get_netmask_address(whd_network_interface_context *iface_context, whd_nw_ip_address_t *net_mask_addr);
+#ifdef WHD_USE_WCM
+#define cy_network_get_netmask_address whd_network_get_netmask_address
+#endif /* WHD_USE_WCM */
 
-/** 
+/**
  * Sends a ping request to the given IP address
  *
  * @param[in]  if_ctx           : Pointer to the network interface context (typecast to void *)
@@ -422,35 +444,38 @@ cy_rslt_t whd_network_get_netmask_address(whd_network_interface_context *iface_c
  * @return CY_RSLT_SUCCESS if successful; CY_RSLT_NETWORK_ERROR_PING if failure.
  * */
 cy_rslt_t whd_network_ping(void *if_ctx, whd_nw_ip_address_t *address, uint32_t timeout_ms, uint32_t* elapsed_time_ms);
+#ifdef WHD_USE_WCM
+#define cy_network_ping whd_network_ping
+#endif /* WHD_USE_WCM */
 
-/** 
+/**
  * Gets an IP address assigned from the connected AP's DHCP server
- * 
+ *
  * @param[in] interface         : WHD interface
  * @param[out] nw_sta_ifx_ctx   : Pointer to the pointer to the network interface context than can be reused by the user
- * 
+ *
  * @return CY_RSLT_SUCCESS if successful ; CY_RSLT_NETWORK_DHCP_TIMEOUT if failed
  */
 cy_rslt_t whd_network_ip_assign(whd_interface_t interface, whd_network_interface_context **nw_sta_ifx_ctx);
 
-/** 
+/**
  * Initializes the network interface for WiFi Host Driver to interact with LWIP
- * 
+ *
  * @param[in] interface         : WHD interface
  * @param[in] iface_type        : Network interface type \ref whd_network_hw_interface_type_t
- * @param[in] static_ip_ptr     : Pointer to the static IP address provided by the user 
+ * @param[in] static_ip_ptr     : Pointer to the static IP address provided by the user
  * @param[out] nw_sta_ifx_ctx   : Pointer to the pointer to the network interface context than can be reused by the user
- * 
+ *
  * @return CY_RSLT_SUCCESS if successful; error code from internal function calls, if failed
  */
 cy_rslt_t whd_network_up(whd_interface_t interface, whd_network_hw_interface_type_t iface_type, whd_network_static_ip_addr_t *static_ip_ptr, whd_network_interface_context **nw_sta_ifx_ctx);
 
-/** 
+/**
  * De-initializes the network interface between LWIP and WiFi Host Driver
- * 
+ *
  * @param[in] interface         : WHD interface
  * @param[in] iface_type        : Network interface type \ref whd_network_hw_interface_type_t
- * 
+ *
  */
 void whd_network_down(whd_interface_t interface, whd_network_hw_interface_type_t iface_type);
 
@@ -461,5 +486,4 @@ void whd_network_down(whd_interface_t interface, whd_network_hw_interface_type_t
 }
 #endif
 /** \} group_lwip_network_interface_integration */
-#endif
-
+#endif /* WHD_NETWORK_LWIP */

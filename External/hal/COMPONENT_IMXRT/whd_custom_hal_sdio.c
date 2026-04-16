@@ -22,7 +22,7 @@
  *
  */
 
-#if defined(WHD_CUSTOM_HAL) && defined(IMXRT)
+#if defined(IMXRT)
 
 #include "cyhal_sdio.h"
 #include "fsl_sdio.h"
@@ -62,7 +62,7 @@ static whd_init_config_t init_config_default =
 {
     .thread_stack_size  = MINIMUM_WHD_STACK_SIZE + 2048,
     .thread_stack_start = NULL,
-    .thread_priority    = (uint32_t)3,
+    .thread_priority    = (uint32_t)CY_RTOS_PRIORITY_HIGH,
     .country            = WHD_COUNTRY_UNITED_STATES
 };
 
@@ -128,7 +128,13 @@ whd_result_t whd_custom_wifi_init(whd_interface_t *interface)
             result = whd_bus_sdio_attach(whd_driv, &whd_sdio_config, &sdio_obj);
             if(result == WHD_SUCCESS)
             {
+#ifdef IMXRT
+                USDHC_ForceClockOn((USDHC_Type *)0x40418000, true);
+#endif
                 result = whd_wifi_on(whd_driv, interface);
+#ifdef IMXRT
+                USDHC_ForceClockOn((USDHC_Type *)0x40418000, false);
+#endif
                 if(result != WHD_SUCCESS)
                 {
                     whd_bus_sdio_detach(whd_driv);
@@ -142,6 +148,22 @@ whd_result_t whd_custom_wifi_init(whd_interface_t *interface)
     }
 
 	return result;
+}
+
+whd_result_t whd_custom_wifi_init_secondary(whd_interface_t *interface, whd_mac_t *mac_address)
+{
+    return whd_add_secondary_interface(whd_driv, mac_address, interface);
+}
+
+whd_result_t whd_custom_wifi_deinit(whd_interface_t interface)
+{
+    whd_result_t result = whd_wifi_off(interface);
+
+    result = whd_deinit(interface);
+
+    whd_bus_sdio_detach(whd_driv);
+
+    return result;
 }
 
 whd_result_t whd_custom_hal_sdio_init(cyhal_sdio_t *obj)
@@ -365,4 +387,4 @@ void whd_custom_hal_sdio_free(cyhal_sdio_t *obj)
     /* To be implemented */
 }
 
-#endif /* WHD_CUSTOM_HAL && IMXRT */
+#endif /* defined(IMXRT) */

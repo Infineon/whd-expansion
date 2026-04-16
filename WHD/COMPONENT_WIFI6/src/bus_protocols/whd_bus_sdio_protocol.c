@@ -128,20 +128,23 @@ whd_result_t whd_bus_sdio_cmd53(whd_driver_t whd_driver, whd_bus_transfer_direct
 static whd_result_t whd_bus_sdio_abort_read(whd_driver_t whd_driver, whd_bool_t retry);
 static whd_result_t whd_bus_sdio_download_firmware(whd_driver_t whd_driver);
 
-#ifndef WHD_USE_CUSTOM_HAL_IMPL
+static whd_result_t whd_bus_sdio_init_oob_intr(whd_driver_t whd_driver);
+static whd_result_t whd_bus_sdio_deinit_oob_intr(whd_driver_t whd_driver);
 static whd_result_t whd_bus_sdio_set_oob_interrupt(whd_driver_t whd_driver, uint8_t gpio_pin_number);
-
+#ifndef WHD_USE_CUSTOM_HAL_IMPL
 static void whd_bus_sdio_irq_handler(void *handler_arg, whd_hal_sdio_event_t event);
 static void whd_bus_sdio_oob_irq_handler(void *arg, whd_hal_gpio_event_t event);
-
 whd_result_t whd_bus_sdio_irq_enable(whd_driver_t whd_driver, whd_bool_t enable);
 whd_result_t whd_bus_sdio_irq_register(whd_driver_t whd_driver);
 whd_result_t whd_bus_sdio_enable_oob_intr(whd_driver_t whd_driver, whd_bool_t enable);
 whd_result_t whd_bus_sdio_register_oob_intr(whd_driver_t whd_driver);
 whd_result_t whd_bus_sdio_unregister_oob_intr(whd_driver_t whd_driver);
-
-static whd_result_t whd_bus_sdio_init_oob_intr(whd_driver_t whd_driver);
-static whd_result_t whd_bus_sdio_deinit_oob_intr(whd_driver_t whd_driver);
+#else
+extern whd_result_t whd_bus_sdio_irq_enable(whd_driver_t whd_driver, whd_bool_t enable);
+extern whd_result_t whd_bus_sdio_irq_register(whd_driver_t whd_driver);
+extern whd_result_t whd_bus_sdio_enable_oob_intr(whd_driver_t whd_driver, whd_bool_t enable);
+extern whd_result_t whd_bus_sdio_register_oob_intr(whd_driver_t whd_driver);
+extern whd_result_t whd_bus_sdio_unregister_oob_intr(whd_driver_t whd_driver);
 #endif /* WHD_USE_CUSTOM_HAL_IMPL */
 
 #ifdef BLHS_SUPPORT
@@ -153,6 +156,13 @@ static whd_result_t whd_bus_sdio_write_wifi_nvram_image(whd_driver_t whd_driver)
 /******************************************************
 *             Global Function definitions
 ******************************************************/
+
+#if defined(WHD_ZEPHYR) && defined(WHD_USE_CUSTOM_HAL_IMPL)
+whd_bool_t whd_hal_is_oob_pin_avaliable(const whd_oob_config_t* oob_config)
+{
+    return !((uint32_t)(oob_config->host_oob_pin) == WHD_NC_PIN_VALUE);
+}
+#endif
 
 whd_result_t whd_bus_sdio_attach(whd_driver_t whd_driver, whd_sdio_config_t *whd_sdio_config, whd_sdio_t *sdio_obj)
 {
@@ -836,11 +846,11 @@ whd_result_t whd_bus_sdio_read_frame(whd_driver_t whd_driver, whd_buffer_t *buff
                                    RESPONSE_NEEDED);
     if (result != WHD_SUCCESS)
     {
-#if ((defined(WHD_CUSTOM_HAL) && defined(IMXRT)) || defined(WHD_ZEPHYR))
+#ifdef IMXRT
         (void)whd_bus_sdio_abort_read(whd_driver, WHD_TRUE);    /* ignore return - not much can be done if this fails */
 #else
         (void)whd_bus_sdio_abort_read(whd_driver, WHD_FALSE);    /* ignore return - not much can be done if this fails */
-#endif /* WHD_CUSTOM_HAL && IMXRT */
+#endif /* IMXRT */
         WPRINT_WHD_ERROR( ("Error during SDIO receive, %s failed at %d \n", __func__, __LINE__) );
         return WHD_SDIO_RX_FAIL;
     }
@@ -1380,7 +1390,6 @@ whd_result_t whd_bus_sdio_sleep(whd_driver_t whd_driver)
     return WHD_SUCCESS;
 }
 
-#ifndef WHD_USE_CUSTOM_HAL_IMPL
 static whd_result_t whd_bus_sdio_set_oob_interrupt(whd_driver_t whd_driver, uint8_t gpio_pin_number)
 {
     if (gpio_pin_number != 0)
@@ -1402,7 +1411,6 @@ static whd_result_t whd_bus_sdio_set_oob_interrupt(whd_driver_t whd_driver, uint
 
     return WHD_SUCCESS;
 }
-#endif /* WHD_USE_CUSTOM_HAL_IMPL */
 
 void whd_bus_sdio_init_stats(whd_driver_t whd_driver)
 {
@@ -1753,6 +1761,7 @@ whd_result_t whd_bus_sdio_enable_oob_intr(whd_driver_t whd_driver, whd_bool_t en
     whd_hal_gpio_enable_event(config, enable);
     return WHD_SUCCESS;
 }
+#endif /* WHD_USE_CUSTOM_HAL_IMPL */
 
 static whd_result_t whd_bus_sdio_init_oob_intr(whd_driver_t whd_driver)
 {
@@ -1801,8 +1810,6 @@ static whd_result_t whd_bus_sdio_deinit_oob_intr(whd_driver_t whd_driver)
 
     return WHD_SUCCESS;
 }
-#endif /* WHD_USE_CUSTOM_HAL_IMPL */
-
 
 #ifdef BLHS_SUPPORT
 static whd_result_t whd_bus_sdio_blhs_read_h2d(whd_driver_t whd_driver, uint32_t *val)

@@ -68,6 +68,8 @@
 
 #pragma once
 
+#if defined(WHD_CUSTOM_HAL)
+
 #include <stdint.h>
 
 #if defined(__cplusplus)
@@ -503,3 +505,5 @@ typedef union
 #endif
 
 /** \} group_result */
+
+#endif /* defined(WHD_CUSTOM_HAL) */

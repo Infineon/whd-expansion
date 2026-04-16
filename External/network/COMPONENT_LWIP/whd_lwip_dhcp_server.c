@@ -34,7 +34,7 @@
 /** @file
  *  Implementation of a simple DHCP server
  */
-
+#ifdef WHD_NETWORK_LWIP
 #include "lwip/err.h"
 #include "lwip/api.h"
 #include "lwip/netif.h"
@@ -492,10 +492,10 @@ static void cy_dhcp_thread_func(cy_thread_arg_t thread_input)
 
                 /* Copy the DHCP header content from the received request packet into the reply packet */
                 memcpy( reply_header, request_header, sizeof(dhcp_header_t) - sizeof(reply_header->options) );
-                
+
                 /* Initialize requested address*/
                 memset( &requested_ip_address, 0, sizeof(requested_ip_address));
-                
+
                 /* Record the client MAC address */
                 memcpy( &client_mac_address, request_header->client_hardware_addr, sizeof( client_mac_address ) );
 
@@ -1017,4 +1017,4 @@ static cy_rslt_t internal_packet_create( cy_lwip_packet_t** packet, uint16_t con
 #endif //LWIP_IPV4
 
 #endif // (LWIP_NETCONN || LWIP_SOCKET)
-
+#endif /* WHD_NETWORK_LWIP */

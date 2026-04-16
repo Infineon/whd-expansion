@@ -19,7 +19,7 @@ RESOURCE_BIN_ADD(".cy_xip.clm", CLM_IMAGE_NAME, wifi_firmware_clm_blob_data, wif
 RESOURCE_BIN_ADD(".rodata", CLM_IMAGE_NAME, wifi_firmware_clm_blob_data, wifi_firmware_clm_blob_size);
 #endif /* ifdef CY_STORAGE_WIFI_DATA */
 #endif /* ifndef __IAR_SYSTEMS_ICC__ */
-const resource_hnd_t wifi_firmware_clm_blob = { RESOURCE_IN_MEMORY, CLM_IMAGE_SIZE, {.mem = { (const char *) wifi_firmware_clm_blob_data }}};
+const resource_hnd_t wifi_firmware_clm_blob = { RESOURCE_IN_MEMORY, (unsigned long)CLM_IMAGE_SIZE, {.mem = { (const char *) wifi_firmware_clm_blob_data }}};
 #endif /* ifndef RESOURCE_READ_FROM_C_FILE */
 
 #endif /* ifndef INCLUDED_CLM_RESOURCES_H_ */

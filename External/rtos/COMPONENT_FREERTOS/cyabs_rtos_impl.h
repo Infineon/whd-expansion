@@ -26,7 +26,7 @@
 
 #pragma once
 
-#ifdef WHD_RTOS
+#ifdef WHD_FREERTOS
 
 #include <FreeRTOS.h>
 #include <semphr.h>
@@ -121,4 +121,4 @@ cy_time_t convert_ms_to_ticks(cy_time_t timeout_ms);
 } // extern "C"
 #endif
 
-#endif /* WHD_FREERTOS*/
+#endif /* WHD_FREERTOS */

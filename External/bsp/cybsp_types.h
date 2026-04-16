@@ -26,6 +26,8 @@
 
 #pragma once
 
+#if defined(WHD_CUSTOM_HAL)
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -39,3 +41,4 @@ extern "C" {
 }
 #endif /* __cplusplus */
 
+#endif /* defined(WHD_CUSTOM_HAL) */

@@ -73,11 +73,11 @@ typedef struct
 typedef struct
 {
     /* TODO: replace with port specific items */
-#if defined(WHD_CUSTOM_HAL) && defined(IMXRT)
+#if defined(IMXRT)
 	sdio_card_t sd_card;
 #else
 	void *empty;
-#endif /* WHD_CUSTOM_HAL && IMXRT */
+#endif /* IMXRT */
 } cyhal_sdio_t;
 
 /** SPI object */

@@ -27,6 +27,8 @@
 
 #pragma once
 
+#if defined(WHD_CUSTOM_HAL)
+
 #include <stdbool.h>
 #include <stdint.h>
 #include "cy_result.h"
@@ -398,3 +400,4 @@ void _cyhal_system_sw0_enable_irq(void);
 
 /** \} group_hal_dma */
 
+#endif /* defined(WHD_CUSTOM_HAL) */

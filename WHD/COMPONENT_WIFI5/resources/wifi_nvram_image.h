@@ -38,10 +38,10 @@ RESOURCE_BIN_ADD(".cy_xip.nvram", NVRAM_IMAGE_NAME, wifi_nvram_image_data, wifi_
 RESOURCE_BIN_ADD(".rodata", NVRAM_IMAGE_NAME, wifi_nvram_image_data, wifi_nvram_image_size);
 #endif
 #else
-uint32_t  wifi_nvram_image_size = NVRAM_IMAGE_SIZE;
+uint32_t  wifi_nvram_image_size = (uint32_t)NVRAM_IMAGE_SIZE;
 #endif
 
-const resource_hnd_t wifi_nvram_image = { RESOURCE_IN_MEMORY, NVRAM_IMAGE_SIZE, {.mem = { (char *) wifi_nvram_image_data }}};
+const resource_hnd_t wifi_nvram_image = { RESOURCE_IN_MEMORY, (unsigned long)NVRAM_IMAGE_SIZE, {.mem = { (char *) wifi_nvram_image_data }}};
 
 #else /* ifndef INCLUDED_NVRAM_IMAGE_H_ */
 

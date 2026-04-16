@@ -144,4 +144,4 @@ cy_rslt_t cy_worker_thread_enqueue(cy_worker_thread_info_t* worker_info,
 }
 #endif
 
-#endif /* WHD_RTOS*/
+#endif /* WHD_RTOS */

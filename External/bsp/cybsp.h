@@ -26,6 +26,8 @@
 
 #pragma once
 
+#if defined(WHD_CUSTOM_HAL)
+
 #include "cybsp_types.h"
 
 #if defined(__cplusplus)
@@ -38,3 +40,4 @@ extern "C" {
 }
 #endif /* __cplusplus */
 
+#endif /* defined(WHD_CUSTOM_HAL) */

@@ -187,4 +187,4 @@ void whd_host_network_process_ethernet_data(whd_interface_t interface, whd_buffe
 #endif // __cplusplus
 
 /** \} group_bsp_network_buffer */
-#endif /* WHD_NETWORK */
+#endif /* WHD_NETWORK_LWIP */

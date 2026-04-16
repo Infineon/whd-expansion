@@ -1,4 +1,4 @@
-# Wi-Fi Host Driver Expansion (WHDE) 1.1.0 
+# Wi-Fi Host Driver Expansion (WHDE) 1.4.0
 Please refer to the [README File](./README.md) and the [WHD API Reference Manual](https://infineon.github.io/wifi-host-driver/html/index.html) for a complete description of the Wi-Fi Host Driver.
 
 ### WIFI6 Supported Chip v4.3.0
@@ -15,7 +15,7 @@ Please refer to the [README File](./README.md) and the [WHD API Reference Manual
 NA
 
 #### CYW55500
-* --- 28.10.522.8 ---
+* --- 28.10.591.6 ---
 
 #### CYW55900
 * --- 28.10.400.2 ---
@@ -42,7 +42,7 @@ NA
 * --- 7.45.98.120 ---
 
 #### CYW43012
-* --- 13.10.271.305 ---
+* --- 13.10.271.349 ---
 
 #### CYW4373
 * --- 13.10.246.321 ---

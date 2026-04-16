@@ -39,6 +39,8 @@
 
 #pragma once
 
+#ifdef WHD_CUSTOM_HAL
+
 #include <stdint.h>
 #include <stdbool.h>
 #include "cy_result.h"
@@ -248,3 +250,4 @@ void cyhal_spi_irq_enable(cyhal_spi_t *obj, cyhal_spi_irq_event_t event, bool en
 }
 #endif
 
+#endif /* WHD_CUSTOM_HAL */

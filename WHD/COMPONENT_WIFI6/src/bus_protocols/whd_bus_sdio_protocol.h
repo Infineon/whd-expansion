@@ -40,6 +40,10 @@ extern "C" {
 #define WHD_BUS_SDIO_MAX_BACKPLANE_TRANSFER_SIZE     (1536)
 #define WHD_BUS_SDIO_BACKPLANE_READ_PADD_SIZE        (0)
 
+#ifndef WHD_NC_PIN_VALUE
+#define WHD_NC_PIN_VALUE (0xFF)
+#endif
+
 #define WHD_BUS_STATS_INCREMENT_VARIABLE(bus_priv, var) \
     do { bus_priv->whd_bus_stats.var++; } while (0)
 

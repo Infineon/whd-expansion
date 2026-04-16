@@ -42,7 +42,7 @@ ifeq ($(filter RESOURCE_READ_FROM_C_FILE,$(DEFINES)),RESOURCE_READ_FROM_C_FILE)
     else ifeq ($(findstring 55900,$(DEVICE_COMPONENTS)),55900)
     COMPONENTS+=55900
     else ifeq ($(findstring 55500,$(DEVICE_COMPONENTS)),55500)
-    COMPONENTS+=55500 
+    COMPONENTS+=55500
     else ifeq ($(findstring 55572,$(DEVICE_COMPONENTS)),55572)
     COMPONENTS+=WIFI6 55572
     else ifeq ($(findstring 55530,$(DEVICE_COMPONENTS)),55530)
